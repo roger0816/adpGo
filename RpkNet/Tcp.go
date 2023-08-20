@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"github.com/roger0816/CSql"
+	"github.com/roger0816/adpGo/CSql"
 
 	_ "github.com/go-sql-driver/mysql"
 )

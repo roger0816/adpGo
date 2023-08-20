@@ -1,3 +1,3 @@
-module adp_go
+module adpGo
 
 go 1.21.0

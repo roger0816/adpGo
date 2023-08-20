@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/roger0816/adp_go/RpkNet"
+	"github.com/roger0816/adpGo/RpkNet"
 )
 
 func main() {
