@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/roger0816/adpGo/RpkNet"
+	"github.com/roger0816/adpGo/RpkNetwork"
 )
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 
 		fmt.Printf("Decoded Data: %+v\n", decodedData)
 	*/
-	RpkNet.TcpListen("6005")
+	RpkNetwork.TcpListen("6005")
 
 	fmt.Print("server start")
 

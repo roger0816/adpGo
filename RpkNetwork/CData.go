@@ -1,4 +1,4 @@
-package RpkNet
+package RpkNetwork
 
 import (
 	"encoding/json"
