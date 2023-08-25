@@ -21,7 +21,6 @@ const (
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-
 	var buffer bytes.Buffer
 	tmp := make([]byte, 1024)
 
@@ -41,16 +40,17 @@ func handleConnection(conn net.Conn) {
 
 	unBuff := UnPackage(buffer.Bytes())
 
-	var  bIsHeartBeat bool =strings.Contains(string(unBuff),"\"action\": 1,")
-	var  bMixQuery bool =strings.Contains(string(unBuff),"\"action\": 6031,")
+	var bIsHeartBeat bool = strings.Contains(string(unBuff), "\"action\": 1,")
+	var bMixQuery bool = strings.Contains(string(unBuff), "\"action\": 6031,")
 
-
-
-	if !bIsHeartBeat && !bMixQuery{
+	if !bIsHeartBeat {
 		currentTime := time.Now()
-		timeStr :=currentTime.Format("15:04:05.999999")
-	
-	fmt.Printf("[%s] server get data :\n %s \n\n",timeStr, string(unBuff))
+		timeStr := currentTime.Format("15:04:05.999999")
+		if !bMixQuery {
+			fmt.Printf("[%s] server get data :\n %s \n\n", timeStr, string(unBuff))
+		} else {
+			fmt.Printf("[%s] server get data :mix request \n", timeStr)
+		}
 	}
 
 	var decodedData CData
@@ -77,14 +77,16 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	if !bIsHeartBeat && !bMixQuery{
+	if !bIsHeartBeat {
 
 		currentTime2 := time.Now()
-		timeStr :=currentTime2.Format("15:04:05.999999")
-
-	fmt.Printf("[%s]Received: %s\n",timeStr, reEncoded)
+		timeStr := currentTime2.Format("15:04:05.999999")
+		if !bMixQuery {
+			fmt.Printf("[%s]Received: %s\n", timeStr, reEncoded)
+		} else {
+			fmt.Printf("[%s]Received: mixdata\n", timeStr)
+		}
 	}
-
 
 }
 
@@ -99,7 +101,6 @@ func StartTcpServer(port string) {
 
 	fmt.Println("Listening on port", port)
 
-
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -110,9 +111,6 @@ func StartTcpServer(port string) {
 	}
 }
 
-
-
-//
 func SendTcp(ip, port, message string) (string, error) {
 	conn, err := net.Dial("tcp", ip+":"+port)
 
@@ -174,7 +172,6 @@ func SendTcpData(ip, port string, data CData) (CData, error) {
 
 	return response, nil
 }
-
 
 func Uint32ToByteArray(somevalue uint32) []byte {
 	buf := new(bytes.Buffer)

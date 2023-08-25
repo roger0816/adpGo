@@ -306,7 +306,7 @@ func ImplementRecall(data CData) CData {
 		sOkMsg = "刪除成功"
 
 	case iAction == C.REPLACE_GAME_INFO:
-
+		bOk=true
 		for i := 0; i < len(data.ListData); i++ {
 			bTmp, _,_ := CSQL.InsertTb(C.SQL_TABLE.CustomerGameInfo(), data.ListData[i].(map[string]interface{}),&error,true)
 		
@@ -318,6 +318,7 @@ func ImplementRecall(data CData) CData {
 		sOkMsg = "客戶遊戲資料修改完成"
 		
 	case iAction == C.DEL_GAME_INFO:
+		bOk = true
 		for i := 0; i < len(data.ListData); i++ {
 		   C.InterFaceToMap(data.ListData[i],tmpMap.Origin()) 
 		   	tmpIn["Sid"] = tmpMap.String("Sid")
