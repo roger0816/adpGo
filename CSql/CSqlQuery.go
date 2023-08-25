@@ -5,16 +5,30 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
 var m_db *sql.DB
 
+var m_writeDb *sql.DB
 
-func OpenDb(ip, port, dbName, username, password string) (error) {
-	
+var LastTbTime = make(map[string]interface{})
+
+func db() *sql.DB {
+	return m_db
+}
+
+// to do 讀寫分離
+func writeDb() *sql.DB {
+	return m_db
+}
+
+func OpenDb(ip, port, dbName, username, password string) error {
+
 	db, err := sql.Open("mysql", username+":"+password+"@tcp("+ip+":"+port+")/"+dbName)
-	m_db =db
+	m_db = db
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -31,37 +45,100 @@ func OpenDb(ip, port, dbName, username, password string) (error) {
 	return nil
 }
 
+func Init(listTableName []string, updateTimeKey string) {
 
-func queryTb(db *sql.DB, tableName string, conditions map[string]interface{}, listOut *[]map[string]interface{}, sError *string) bool {
+	for _, v := range listTableName {
+		in := make(map[string]interface{})
+		in["DESC"] = updateTimeKey
+		in["LIMIT"] = "1"
+
+		listOut := []interface{}{}
+		var sError string
+		bOk := QueryTb(v, in, &listOut, &sError)
+
+		if bOk && len(listOut) > 0 {
+			if record, ok := listOut[0].(map[string]interface{}); ok {
+				if dateTime, exists := record[updateTimeKey]; exists {
+					LastTbTime[v] = dateTime
+				}
+			}
+		}
+	}
+
+	fmt.Printf("lastTbTime: %+v\n", LastTbTime)
+}
+
+func QueryTb(tableName string, conditions map[string]interface{}, listOut *[]interface{}, sError *string) bool {
+	return BaseQuery(tableName, conditions, listOut, sError, false)
+}
+
+func BaseQuery(tableName string, conditions map[string]interface{}, listOut *[]interface{}, sError *string, UseMainDb bool) bool {
 	*listOut = nil
 
 	query := "SELECT * FROM " + tableName
 	args := make([]interface{}, 0)
 	whereClauses := make([]string, 0)
+	var sSub string = ""
+	var sOrderBy string = ""
+	var sLimit string = ""
 
 	for key, value := range conditions {
 		if strings.ToUpper(key) == "ASC" {
-			query += " ORDER BY " + value.(string)
+			sOrderBy = " ORDER BY " + value.(string)
 			continue
 		}
 		if strings.ToUpper(key) == "DESC" {
-			query += " ORDER BY " + value.(string) + " DESC"
+			sOrderBy += " ORDER BY " + value.(string) + " DESC"
 			continue
 		}
 		if strings.ToUpper(key) == "LIMIT" {
-			query += " LIMIT " + value.(string)
+			sLimit += " LIMIT " + value.(string)
 			continue
 		}
 
-		whereClauses = append(whereClauses, key+"=?")
-		args = append(args, value)
+		tmpShift := "=?"
+
+		if len(strings.Split(key, " ")) > 1 {
+			tmpShift = "?"
+		}
+
+		whereClauses = append(whereClauses, key+tmpShift)
+
+		switch v := value.(type) {
+		case bool:
+			if v {
+				args = append(args, "1")
+			} else {
+				args = append(args, "0")
+			}
+		default:
+			args = append(args, value)
+		}
+
 	}
 
 	if len(whereClauses) > 0 {
 		query += " WHERE " + strings.Join(whereClauses, " AND ")
 	}
 
-	stmt, err := db.Prepare(query)
+	if sOrderBy != "" {
+		sSub += sOrderBy
+	}
+
+	if sLimit != "" {
+		sSub += sLimit
+	}
+
+	fmt.Printf("sql query : %s \n", query+sSub)
+
+	var stmt *sql.Stmt
+	var err error
+	if UseMainDb {
+		stmt, err = writeDb().Prepare(query + sSub)
+	} else {
+		stmt, err = db().Prepare(query + sSub)
+	}
+
 	if err != nil {
 		log.Println("Error preparing query:", err)
 		*sError = err.Error()
@@ -98,7 +175,14 @@ func queryTb(db *sql.DB, tableName string, conditions map[string]interface{}, li
 
 		data := make(map[string]interface{})
 		for i, name := range columnNames {
-			data[name] = *rowData[i].(*interface{})
+
+			switch v := (*rowData[i].(*interface{})).(type) {
+			case []byte:
+				data[name] = string(v)
+			default:
+				data[name] = v
+			}
+
 		}
 		*listOut = append(*listOut, data)
 	}
@@ -110,4 +194,477 @@ func queryTb(db *sql.DB, tableName string, conditions map[string]interface{}, li
 	}
 
 	return true
+}
+
+func QueryCount(sTableName string, conditions map[string]interface{}, useMainDb bool) int {
+	iRe := 0
+
+	var sSub string
+	var listTmp []interface{}
+	var iCount int
+
+	query := "SELECT COUNT(*) FROM " + sTableName
+
+	for key, value := range conditions {
+		if iCount == 0 {
+			sSub += "  WHERE "
+		} else {
+			sSub += " AND "
+		}
+		if strings.Contains(key, " ") {
+			sSub += key + " ?" // 处理自带 >= <= 或 like
+		} else {
+			sSub += key + " = ? "
+		}
+		iCount++
+		listTmp = append(listTmp, value)
+	}
+
+	var rows *sql.Rows
+	var err error
+
+	if useMainDb {
+		rows, err = writeDb().Query(query+sSub, listTmp...)
+
+	} else {
+		rows, err = db().Query(query+sSub, listTmp...)
+
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&iRe)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return iRe
+}
+
+func UpdateTb(sTableName string, conditions, data map[string]interface{}, sError *string) bool {
+	sCmd := "UPDATE " + sTableName + " SET "
+
+	sDateTime := CurrentTime()
+
+	if sTableName != "LastUpdateTime" {
+		data["UpdateTime"] = sDateTime
+	}
+	var listKey []string
+	for key := range data {
+		listKey = append(listKey, key)
+	}
+
+	bFirst := true
+	for _, key := range listKey {
+		v := data[key]
+
+		if key == "Sid" || strings.TrimSpace(fmt.Sprint(v)) == "" || v == nil {
+			continue
+		}
+
+		if !bFirst {
+			sCmd += ", "
+		}
+		sCmd += key + " = ? "
+
+		bFirst = false
+	}
+
+	var sSub string
+	var tmp []string
+	for key := range conditions {
+		tmp = append(tmp, key)
+	}
+
+	for i, key := range tmp {
+		if i == 0 {
+			sSub += " WHERE "
+		} else {
+			sSub += " AND "
+		}
+
+		v := conditions[key]
+
+		if boolType, ok := v.(bool); ok {
+			if boolType {
+				v = 1
+			} else {
+				v = 0
+			}
+		}
+
+		if strType, ok := v.(string); ok {
+			sSub += key + "='" + strType + "' "
+		} else {
+			sSub += key + "=" + fmt.Sprint(v) + " "
+		}
+	}
+
+	query := sCmd + sSub
+
+	stmt, err := writeDb().Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	args := make([]interface{}, 0)
+	for _, key := range listKey {
+		v := data[key]
+
+		if key == "Sid" || strings.TrimSpace(fmt.Sprint(v)) == "" || v == nil {
+			continue
+		}
+
+		args = append(args, v)
+	}
+
+	_, execErr := stmt.Exec(args...)
+	if execErr != nil {
+		log.Fatal(execErr)
+	}
+	setLastUpdateTime(sTableName, sDateTime)
+
+	return true
+}
+func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]interface{}, sError *string) bool {
+	if len(dataList) != len(conditionsList) {
+		*sError = "The length of conditionsList and dataList must be equal"
+		return false
+	}
+
+	sDateTime := CurrentTime()
+
+	baseCmd := "UPDATE " + sTableName + " SET "
+
+	transaction, err := writeDb().Begin()
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+
+	for idx, data := range dataList {
+		conditions := conditionsList[idx]
+
+		if sTableName != "LastUpdateTime" {
+			data["UpdateTime"] = sDateTime
+		}
+
+		var listKey []string
+		for key := range data {
+			listKey = append(listKey, key)
+		}
+
+		sCmd := ""
+		bFirst := true
+		for _, key := range listKey {
+			v := data[key]
+
+			if key == "Sid" || strings.TrimSpace(fmt.Sprint(v)) == "" || v == nil {
+				continue
+			}
+
+			if !bFirst {
+				sCmd += ", "
+			}
+			sCmd += key + " = ? "
+
+			bFirst = false
+		}
+
+		var sSub string
+		var tmp []string
+		for key := range conditions {
+			tmp = append(tmp, key)
+		}
+
+		for i, key := range tmp {
+			if i == 0 {
+				sSub += " WHERE "
+			} else {
+				sSub += " AND "
+			}
+
+			v := conditions[key]
+
+			if boolType, ok := v.(bool); ok {
+				if boolType {
+					v = 1
+				} else {
+					v = 0
+				}
+			}
+
+			if strType, ok := v.(string); ok {
+				sSub += key + "='" + strType + "' "
+			} else {
+				sSub += key + "=" + fmt.Sprint(v) + " "
+			}
+		}
+
+		query := baseCmd + sCmd + sSub
+		stmt, err := transaction.Prepare(query)
+		if err != nil {
+			log.Fatal(err)
+			return false
+		}
+
+		args := make([]interface{}, 0)
+		for _, key := range listKey {
+			v := data[key]
+
+			if key == "Sid" || strings.TrimSpace(fmt.Sprint(v)) == "" || v == nil {
+				continue
+			}
+
+			args = append(args, v)
+		}
+
+		_, execErr := stmt.Exec(args...)
+		if execErr != nil {
+			log.Fatal(execErr)
+			transaction.Rollback()
+			return false
+		}
+		stmt.Close()
+	}
+
+	err = transaction.Commit()
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+
+	setLastUpdateTime(sTableName, sDateTime)
+
+	return true
+}
+
+func InsertTb(sTableName string, input map[string]interface{}, sError *string, bOrReplace bool) (bool, int64, map[string]interface{}) {
+	data := input
+
+	sDateTime := CurrentTime()
+
+	if sTableName != "LastUpdateTime" {
+		data["UpdateTime"] = sDateTime // 使用 "updateTime"，確保大小寫正確
+	}
+	var listKey []string
+	for k := range data {
+		listKey = append(listKey, k)
+	}
+
+	if val, ok := data["Sid"]; ok {
+		switch v := val.(type) {
+		case string:
+			if v == "" {
+				delete(data, "Sid")
+			}
+		case int:
+			// No action required for int values
+		default:
+			log.Fatalf("Sid has unexpected type: %T", v)
+		}
+	}
+
+	operation := "INSERT"
+	if bOrReplace {
+		operation = "REPLACE"
+	}
+
+	var tmpKey, tmpValue string
+	for i, sKey := range listKey {
+		if i != 0 {
+			tmpKey += ","
+			tmpValue += ","
+		}
+		tmpKey += sKey
+		tmpValue += "?"
+	}
+
+	sCmd := fmt.Sprintf("%s INTO %s (%s) VALUES (%s);", operation, sTableName, tmpKey, tmpValue)
+
+	fmt.Println("cmd:", sCmd)
+
+	query, err := writeDb().Prepare(sCmd)
+	if err != nil {
+		*sError = "Failed to query the inserted data: " + err.Error()
+		log.Fatal(err)
+	}
+
+	args := make([]interface{}, len(listKey))
+	for i, sKey := range listKey {
+		args[i] = data[sKey]
+		if sTableName != "PicData" {
+			fmt.Println(sKey, ":", data[sKey])
+		}
+	}
+	// Capture the result after execution
+	result, err := query.Exec(args...)
+	if err != nil {
+		*sError = err.Error()
+		return false, 0, nil
+	}
+
+	// Retrieve the last inserted ID
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		*sError = "Failed to retrieve the last insert ID: " + err.Error()
+		return false, 0, nil
+	}
+
+	// Query the inserted data using a new Query and scan into the map
+	rows, err := writeDb().Query("SELECT * FROM "+sTableName+" WHERE Sid=?", lastInsertID)
+	if err != nil {
+		*sError = "Failed to query the inserted data: " + err.Error()
+		return true, lastInsertID, nil
+	}
+	defer rows.Close()
+
+	columns, _ := rows.Columns()
+	values := make([]interface{}, len(columns))
+	pointers := make([]interface{}, len(columns))
+	for i := range values {
+		pointers[i] = &values[i]
+	}
+	if rows.Next() {
+		err := rows.Scan(pointers...)
+		if err != nil {
+			*sError = "Failed to scan the inserted data: " + err.Error()
+			return true, lastInsertID, nil
+		}
+	}
+
+	resultData := make(map[string]interface{})
+	for i, colName := range columns {
+		val := values[i]
+		resultData[colName] = val
+	}
+
+	setLastUpdateTime(sTableName, sDateTime)
+
+	return true, lastInsertID, resultData
+}
+
+func DelFromTb(sTableName string, conditions map[string]interface{}, sError *string) bool {
+	var whereClauses []string
+	var args []interface{}
+
+	// Constructing WHERE clauses based on conditions
+	for k, v := range conditions {
+		whereClauses = append(whereClauses, k+" = ?")
+		args = append(args, v)
+	}
+	whereStr := strings.Join(whereClauses, " AND ")
+
+	// Preparing the DELETE statement
+	sCmd := fmt.Sprintf("DELETE FROM %s WHERE %s", sTableName, whereStr)
+	fmt.Println("del from tb cmd:", sCmd)
+
+	query, err := writeDb().Prepare(sCmd)
+	if err != nil {
+		*sError = err.Error()
+		log.Println("Error in preparing query:", err)
+		return false
+	}
+	defer query.Close()
+
+	// Executing the DELETE statement
+	result, err := query.Exec(args...)
+	if err != nil {
+		*sError = err.Error()
+		log.Println("Error in executing query:", err)
+		return false
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		*sError = err.Error()
+		log.Println("Error in getting rows affected:", err)
+		return false
+	}
+
+	if rowsAffected == 0 {
+		log.Println("No data were deleted.")
+		return false
+		// Optionally, you can return false here if you consider no deletions as a failure.
+	}
+
+	// You can setTrigger here if needed
+	// setTrigger(sTableName, sDateTime)
+
+	return true
+}
+
+func CurrentTime() string {
+
+	location, err := time.LoadLocation("Asia/Taipei") // Taipei is in the UTC+8 timezone
+	if err != nil {
+		panic(err)
+	}
+
+	re := time.Now().In(location).Format("20060102150405")
+
+	return re
+}
+
+func setLastUpdateTime(tableName string, sDateTime string) {
+
+	if tableName == "LastUpdateTime" {
+		return
+	}
+
+	in := make(map[string]interface{})
+	in["TableName"] = tableName
+	in["Last"] = sDateTime
+	var sError string
+	InsertTb("LastUpdateTime", in, &sError, true)
+
+}
+
+func LastCustomerId(sClassSid, sClassId string,sError *string) (string, bool) {
+	out := sClassId + "-EA00"
+
+	queryStr := "SELECT Id FROM CustomerData WHERE Class=? ORDER BY Id DESC"
+	row := writeDb().QueryRow(queryStr, sClassSid)
+	var id string
+	err := row.Scan(&id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return out, true
+		}
+        *sError =err.Error()
+		return out, false
+	}
+
+	return id, true
+}
+
+func getLastUpdateTime(tableName string) string {
+	if tableName == "LastUpdateTime" {
+		return ""
+	}
+
+	var re string
+
+	in := make(map[string]interface{})
+	listOut := []interface{}{}
+	in["TableName"] = tableName
+	var sError string
+	QueryTb("LastUpdateTime", in, &listOut, &sError)
+
+	if len(listOut) > 0 {
+		if v, ok := listOut[0].(map[string]interface{}); ok {
+			if updateTimeStr, ok := v["Last"].(string); ok {
+				re = updateTimeStr
+			}
+
+		}
+	}
+
+	return re
 }

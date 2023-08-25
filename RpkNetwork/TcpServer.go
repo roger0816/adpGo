@@ -2,12 +2,12 @@ package RpkNetwork
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"os"
-	"strconv"
 	"strings"
-	"github.com/roger0816/adpGo/CSql"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -20,6 +20,7 @@ const (
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
+
 
 	var buffer bytes.Buffer
 	tmp := make([]byte, 1024)
@@ -38,43 +39,28 @@ func handleConnection(conn net.Conn) {
 		}
 	}
 
-	quotedData := strconv.QuoteToASCII(string(buffer.Bytes()))
-	quotedData = strings.Replace(quotedData, headerMaker, "", -1)
-	quotedData = strings.Replace(quotedData, footMaker, "", -1)
-	quotedData = strings.Replace(quotedData, endMarker, "", -1)
-	quotedData = strings.Replace(quotedData, "\\x00", "", -1)
-	quotedData = strings.Replace(quotedData, "\\x01_", "", -1)
-	quotedData = strings.Replace(quotedData, " ", "", -1)
-	quotedData = strings.Replace(quotedData, "\\n", "", -1)
+	unBuff := UnPackage(buffer.Bytes())
+
+	var  bIsHeartBeat bool =strings.Contains(string(unBuff),"\"action\": 1,")
+	var  bMixQuery bool =strings.Contains(string(unBuff),"\"action\": 6031,")
 
 
-	fmt.Printf("server get data :\n %s \n\n",quotedData)
 
-	if len(quotedData) > 2 {
-
-		if quotedData[0] == '"' {
-			quotedData = quotedData[1:]
-
-		}
-
-		if quotedData[len(quotedData)-1] == '"' {
-			quotedData = quotedData[:len(quotedData)-1]
-		}
-
+	if !bIsHeartBeat && !bMixQuery{
+		currentTime := time.Now()
+		timeStr :=currentTime.Format("15:04:05.999999")
+	
+	fmt.Printf("[%s] server get data :\n %s \n\n",timeStr, string(unBuff))
 	}
 
-	quotedData = strings.Replace(quotedData, "\\", "", -1)
-
-	tmpByteArray := []byte(quotedData)
-
 	var decodedData CData
-	err2 := decodedData.DecodeJSON(tmpByteArray)
+	err2 := decodedData.DecodeJSON(unBuff)
 	if err2 != nil {
 		fmt.Println("Error decoding JSON:", err2)
 		return
 	}
 
-	re := Query(decodedData)
+	re := ImplementRecall(decodedData)
 	reEncoded, err3 := re.EncodeJSON()
 
 	if err3 != nil {
@@ -82,20 +68,27 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	_, err4 := conn.Write(reEncoded)
+	recall := Package(reEncoded)
+
+	_, err4 := conn.Write(recall)
 
 	if err4 != nil {
 		fmt.Println("Error writing:", err4)
 		return
 	}
 
-	fmt.Printf("Decoded Data: %+v\n", decodedData)
+	if !bIsHeartBeat && !bMixQuery{
 
-	fmt.Printf("Received: %s\n", quotedData)
+		currentTime2 := time.Now()
+		timeStr :=currentTime2.Format("15:04:05.999999")
+
+	fmt.Printf("[%s]Received: %s\n",timeStr, reEncoded)
+	}
+
+
 }
 
-
-func TcpListen(port string) {
+func StartTcpServer(port string) {
 
 	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -105,11 +98,6 @@ func TcpListen(port string) {
 	defer listener.Close()
 
 	fmt.Println("Listening on port", port)
-
-
-	 CSql.OpenDb("172.104.112.34", "3306", "adp", "roger", "Aa111111")
-
-
 
 
 	for {
@@ -123,7 +111,9 @@ func TcpListen(port string) {
 }
 
 
-func SendTcp(ip ,port ,message string)(string ,error ){
+
+//
+func SendTcp(ip, port, message string) (string, error) {
 	conn, err := net.Dial("tcp", ip+":"+port)
 
 	if err != nil {
@@ -149,8 +139,7 @@ func SendTcp(ip ,port ,message string)(string ,error ){
 
 }
 
-
-func SendTcpData(ip,port string, data CData) (CData, error) {
+func SendTcpData(ip, port string, data CData) (CData, error) {
 
 	fmt.Println("send tcp data")
 
@@ -164,7 +153,7 @@ func SendTcpData(ip,port string, data CData) (CData, error) {
 	if err != nil {
 		return CData{}, fmt.Errorf("Error encoding data: %v", err)
 	}
-	fmt.Printf("send tcp : %x",encodedData)
+	fmt.Printf("send tcp : %x", encodedData)
 	_, err = conn.Write(encodedData)
 	if err != nil {
 		return CData{}, fmt.Errorf("Error sending data: %v", err)
@@ -184,4 +173,67 @@ func SendTcpData(ip,port string, data CData) (CData, error) {
 	}
 
 	return response, nil
+}
+
+
+func Uint32ToByteArray(somevalue uint32) []byte {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, somevalue)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	return buf.Bytes()
+}
+
+func ByteArrayToUint32(data []byte) uint32 {
+	//return binary.LittleEndian.Uint32(data)
+	return binary.BigEndian.Uint32(data)
+}
+
+func headerByte() []byte {
+	return []byte{'@', 'A', 'K', 'A', '4', '0', '4', '@'}
+}
+
+func footByte() []byte {
+	return []byte{'@', '4', '0', '4', 'A', 'K', 'A', '@'}
+}
+
+func Package(data []byte) []byte {
+	var pdata []byte
+	//data = append(data, []byte(endMarker)...)
+	pdata = append(pdata, headerByte()...)
+	dataLength := uint32(len(data) + 20)
+	dataLengthBytes := Uint32ToByteArray(dataLength)
+
+	pdata = append(pdata, dataLengthBytes...)
+	pdata = append(pdata, data...)
+	pdata = append(pdata, footByte()...)
+	return pdata
+}
+
+func UnPackage(data []byte) []byte {
+	hb := headerByte()
+	ft := footByte()
+
+	sp := bytes.Index(data, hb)
+
+	if sp < 0 {
+		// fmt.Println("unPackage:No header", string(p.m_data))
+		return nil
+	}
+
+	ep := bytes.Index(data, ft)
+
+	if ep < 0 {
+		// fmt.Println("unPackage:No footer", string(p.m_data))
+		return nil
+	}
+
+	datavlen := ByteArrayToUint32(data[sp+8 : sp+12])
+
+	rdata := data[sp+12 : sp+12+int(datavlen)-20]
+
+	// fmt.Println("unPackage", string(rdata))
+
+	return rdata
 }
