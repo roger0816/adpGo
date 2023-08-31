@@ -4,7 +4,10 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
+	"time"
 
 	CSQL "github.com/roger0816/adpGo/CSql"
 	C "github.com/roger0816/adpGo/Common"
@@ -17,13 +20,13 @@ func ImplementRecall(data CData) CData {
 	var reData C.VariantMap = make(map[string]interface{})
 	reList := []interface{}{}
 	iAction := data.Action
-	var error, sOkMsg string
+	var sError, sOkMsg string
 	var bOk bool = false
 
 	var tmpIn C.VariantMap = make(map[string]interface{})
 
 	var tmpMap C.VariantMap = make(map[string]interface{})
-	//var tmpList = []interface{}{}
+	// var tmpList = []interface{}{}
 	var Data C.VariantMap = data.Data
 
 	switch {
@@ -50,9 +53,9 @@ func ImplementRecall(data CData) CData {
 	case iAction == C.LOGIN:
 		fmt.Println("login")
 		//conditions:=[string]interface
-		//CSql.QueryTb(tableName, conditions, listOut, sError)
+		//CSQL.QueryTb(tableName, conditions, listOut, sError)
 		bOk = false
-		error = "連線失敗"
+		sError = "連線失敗"
 
 		if len(data.ListData) >= 2 {
 
@@ -61,10 +64,10 @@ func ImplementRecall(data CData) CData {
 				"Password": data.ListData[1],
 			}
 
-			tmpB := CSQL.QueryTb(C.SQL_TABLE.UserData(), in, &reList, &error)
+			tmpB := CSQL.QueryTb(C.SQL_TABLE.UserData(), in, &reList, &sError)
 
 			if tmpB {
-				error = "帳密錯誤"
+				sError = "帳密錯誤"
 			}
 
 			if len(reList) > 0 {
@@ -96,36 +99,36 @@ func ImplementRecall(data CData) CData {
 		//
 	case iAction == C.SET_VALUE:
 
-		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.Settings(), Data, &error, true)
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.Settings(), Data, &sError, true)
 
 	//QUERY============
 
 	case iAction == C.GET_VALUE:
 
-		bOk = CSQL.QueryTb(C.SQL_TABLE.Settings(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.Settings(), Data, &reList, &sError)
 		if bOk && len(reList) > 0 {
 			C.InterFaceToMap(reList[0], reData.Origin())
 		}
 
 	case iAction == C.QUERY_USER:
 
-		bOk = CSQL.QueryTb(C.SQL_TABLE.UserData(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.UserData(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_CUSTOMER:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerData(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerData(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_CUSTOMER_GAME_INFO:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerGameInfo(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerGameInfo(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_CUSTOMER_COST:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerCost(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerCost(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_GAME_LIST:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.GameList(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.GameList(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_GAME_RATE:
 
-		bOk = CSQL.QueryTb(C.SQL_TABLE.GameRate(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.GameRate(), Data, &reList, &sError)
 
 		if bOk && len(reList) < 1 {
 			tmpOut := make([]interface{}, 0)
@@ -133,29 +136,41 @@ func ImplementRecall(data CData) CData {
 				"sid": Data["GameSid"],
 			}
 
-			bOk = CSQL.QueryTb(C.SQL_TABLE.GameList(), tmp, &tmpOut, &error)
+			bOk = CSQL.QueryTb(C.SQL_TABLE.GameList(), tmp, &tmpOut, &sError)
 
 			if bOk && len(tmpOut) > 0 {
-				//to do
+
+				var GameData C.DataGameList
+
+				C.InterfaceToStruct(tmpOut[0], &GameData)
+
+				var gameRateData C.DataGameRate
+				gameRateData.GameSid = strconv.Itoa(GameData.Sid)
+				gameRateData.GameName = GameData.Name
+				gameRateData.UserSid = GameData.UserSid
+				gameRateData.Rate = GameData.GameRate
+
+				var sErrorTmp string
+				go CSQL.InsertTb(C.SQL_TABLE.GameRate(), C.StructToMap(gameRateData), &sErrorTmp, true)
 			}
 
 		}
 
 	case iAction == C.QUERY_GAME_ITEM:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.GameItem(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.GameItem(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_BULLETIN:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.Bulletin(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.Bulletin(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_CUSTOM_CLASS:
 		in := make(map[string]interface{})
 		in["Type"] = "group"
-		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerClass(), in, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerClass(), in, &reList, &sError)
 
 	case iAction == C.QUERY_CUSTOM_DEBIT:
 		in := make(map[string]interface{})
 		in["Type"] = "debit"
-		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerClass(), in, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerClass(), in, &reList, &sError)
 
 	case iAction == C.QUERY_FACTORY_CLASS:
 
@@ -171,7 +186,7 @@ func ImplementRecall(data CData) CData {
 			d = Data
 		}
 
-		bOk = CSQL.QueryTb(C.SQL_TABLE.FactoryClass(), d, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.FactoryClass(), d, &reList, &sError)
 
 		fac := C.DataFactory{
 			Sid:  999,
@@ -180,38 +195,38 @@ func ImplementRecall(data CData) CData {
 		}
 		reList = append(reList, fac)
 
-	case iAction == C.QUERY_GROUP:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.GroupData(), Data, &reList, &error)
-
 	case iAction == C.QUERY_PAY_TYPE:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.PayType(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.PayType(), Data, &reList, &sError)
+
+	// case iAction == C.QUERY_GROUP:
+	// 	bOk = CSQL.QueryTb(C.SQL_TABLE.GroupData(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_ORDER:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.OrderData(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.OrderData(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_BOUNS:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.UserBonus(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.UserBonus(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_SCHEDULE:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.Schedule(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.Schedule(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_EXCHANGE:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.ExchangeRate(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.ExchangeRate(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_PRIMERATE:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.PrimeCostRate(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.PrimeCostRate(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_PIC:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.PicData(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.PicData(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_ITEM_COUNT:
-		bOk = CSQL.QueryTb(C.SQL_TABLE.GameItemCount(), Data, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.GameItemCount(), Data, &reList, &sError)
 
 	case iAction == C.QUERY_DEBIT_CLASS:
 		tmpIn := make(map[string]interface{})
 		tmpIn["ASC"] = "Sort"
 
-		bOk = CSQL.QueryTb(C.SQL_TABLE.DebitClass(), tmpIn, &reList, &error)
+		bOk = CSQL.QueryTb(C.SQL_TABLE.DebitClass(), tmpIn, &reList, &sError)
 
 	case iAction == C.QUERY_MIX:
 
@@ -264,73 +279,101 @@ func ImplementRecall(data CData) CData {
 			// 以下是其他可能的欄位賦值
 		}
 
-		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.UserData(), C.StructToMap(user), &error, false)
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.UserData(), C.StructToMap(user), &sError, false)
 		sOkMsg = "新增成功"
 
 	case iAction == C.EDIT_USER:
 		in := make(map[string]interface{})
 		in["Sid"] = Data["Sid"]
-		bOk = CSQL.UpdateTb(C.SQL_TABLE.UserData(), in, Data, &error)
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.UserData(), in, Data, &sError)
 		sOkMsg = "修改成功"
 
 	case iAction == C.DEL_USER:
-		bOk = CSQL.DelFromTb(C.SQL_TABLE.UserData(), Data, &error)
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.UserData(), Data, &sError)
 		sOkMsg = "刪除成功"
 
 	case iAction == C.ADD_CUSTOMER:
 
-		bOk, _, tmpMap = CSQL.InsertTb(C.SQL_TABLE.CustomerData(), Data, &error, false)
+		bOk, _, tmpMap = CSQL.InsertTb(C.SQL_TABLE.CustomerData(), Data, &sError, false)
 
 		sOkMsg = "客戶名稱:" + tmpMap.String("Name") + "\n新增成功"
 
 	case iAction == C.EDIT_CUSTOMER:
 
 		tmpIn["Sid"] = Data["Sid"]
-		bOk = CSQL.UpdateTb(C.SQL_TABLE.CustomerData(), tmpIn, Data, &error)
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.CustomerData(), tmpIn, Data, &sError)
 		sOkMsg = "修改成功"
 
 	case iAction == C.DEL_CUSTOMER:
 		in := make(map[string]interface{})
 		in["Sid"] = Data["Sid"]
-		bOk = CSQL.DelFromTb(C.SQL_TABLE.CustomerData(), in, &error)
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.CustomerData(), in, &sError)
 		if bOk {
-			CSQL.DelFromTb(C.SQL_TABLE.CustomerMoney(), in, &error)
+			CSQL.DelFromTb(C.SQL_TABLE.CustomerMoney(), in, &sError)
 
 			in = make(map[string]interface{})
 			in["CustomerSid"] = Data["Sid"]
-			CSQL.DelFromTb(C.SQL_TABLE.CustomerGameInfo(), in, &error)
+			CSQL.DelFromTb(C.SQL_TABLE.CustomerGameInfo(), in, &sError)
 
-			CSQL.DelFromTb(C.SQL_TABLE.CustomerCost(), in, &error)
+			CSQL.DelFromTb(C.SQL_TABLE.CustomerCost(), in, &sError)
 		}
 
 		sOkMsg = "刪除成功"
 
 	case iAction == C.REPLACE_GAME_INFO:
-		bOk=true
+		bOk = true
 		for i := 0; i < len(data.ListData); i++ {
-			bTmp, _,_ := CSQL.InsertTb(C.SQL_TABLE.CustomerGameInfo(), data.ListData[i].(map[string]interface{}),&error,true)
-		
-			if  !bTmp {
+			bTmp, _, _ := CSQL.InsertTb(C.SQL_TABLE.CustomerGameInfo(), data.ListData[i].(map[string]interface{}), &sError, true)
+
+			if !bTmp {
 				bOk = false
 			}
 		}
 
 		sOkMsg = "客戶遊戲資料修改完成"
-		
+
 	case iAction == C.DEL_GAME_INFO:
 		bOk = true
 		for i := 0; i < len(data.ListData); i++ {
-		   C.InterFaceToMap(data.ListData[i],tmpMap.Origin()) 
-		   	tmpIn["Sid"] = tmpMap.String("Sid")
-			bTmp:= CSQL.DelFromTb(C.SQL_TABLE.CustomerGameInfo(), tmpIn,&error)
-		
-			if  !bTmp {
+			C.InterFaceToMap(data.ListData[i], tmpMap.Origin())
+			tmpIn["Sid"] = tmpMap.String("Sid")
+			bTmp := CSQL.DelFromTb(C.SQL_TABLE.CustomerGameInfo(), tmpIn, &sError)
+
+			if !bTmp {
 				bOk = false
 			}
 		}
 
 		sOkMsg = "客戶遊戲資料修改完成"
 
+	case iAction == C.ADD_CUSTOMER_COST:
+		bOk, _, tmpMap = CSQL.InsertTb(C.SQL_TABLE.CustomerCost(), Data, &sError, false)
+
+		sOkMsg = "加值完成"
+	case iAction == C.LAST_CUSTOMER_COST_ID:
+		var tmpId string
+
+		tmpId, bOk = CSQL.LastCustomerAddCostID()
+		tmpMap["OrderId"] = tmpId
+		reList = append(reList, tmpMap)
+
+	case iAction == C.ADD_GAME_LIST:
+		var Sid int64
+		bOk, Sid, _ = CSQL.InsertTb(C.SQL_TABLE.GameList(), Data, &sError, false)
+
+		gameList := C.DataGameList{}
+		C.MapToStruct(Data, &gameList)
+		gameRate := C.DataGameRate{}
+		gameRate.GameSid = strconv.FormatInt(Sid, 10)
+		gameRate.Rate = gameList.GameRate
+		gameRate.GameName = gameList.Name
+		gameRate.UserSid = gameList.UserSid
+
+		tmpMap = C.StructToMap(gameRate)
+		if bOk {
+			CSQL.InsertTb(C.SQL_TABLE.GameRate(), tmpMap, &sError, false)
+		}
+		sOkMsg = "遊戲新增成功"
 
 	case iAction == C.EDIT_GAME_LIST:
 
@@ -345,18 +388,92 @@ func ImplementRecall(data CData) CData {
 		//tmpRate := strconv.FormatFloat(game.GameRate, 'f', 2, 64) // 'f' 表示格式，2 表示小數點後的位數，64 表示它是 float64
 
 		gameRate := map[string]interface{}{
-			"GameSid":  game.Id,
+			"GameSid":  game.Sid,
 			"GameName": game.Name,
 			"UserSid":  game.UserSid,
 			"Rate":     game.GameRate,
 		}
 
-		bOk = CSQL.UpdateTb(C.SQL_TABLE.GameList(), in, C.GetData(&game), &error)
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.GameList(), in, C.GetData(&game), &sError)
 
 		if bOk {
-			bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GameRate(), gameRate, &error, true)
+			bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GameRate(), gameRate, &sError, true)
+			//game item NTD 沒有使用，客戶端直接用GameRate*Bonus計算出來顯示
+			//updateItemPrice(game.Sid,game.GameRate)
 		}
-		sOkMsg = "修改完成"
+		sOkMsg = "遊戲修改完成"
+
+	case iAction == C.DEL_GAME_LIST:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.GameList(), tmpIn, &sError)
+		if bOk {
+			tmpMap["GameSid"] = tmpIn["Sid"]
+			CSQL.DelFromTb(C.SQL_TABLE.GameRate(), tmpMap, &sError)
+			CSQL.DelFromTb(C.SQL_TABLE.GameItem(), tmpMap, &sError)
+			CSQL.DelFromTb(C.SQL_TABLE.GameItemCount(), tmpMap, &sError)
+			CSQL.DelFromTb(C.SQL_TABLE.QueryCount(), tmpMap, &sError)
+
+		}
+		sOkMsg = "遊戲刪除成功"
+
+	case iAction == C.ADD_GAME_ITEM:
+
+		var iCount int64 = 0
+
+		var bHasCount bool = false
+		if count, ok := Data["Count"]; ok {
+
+			switch v := count.(type) {
+			case int:
+				iCount = int64(v)
+			case int32:
+				iCount = int64(v)
+			case int64:
+				iCount = v
+			case float64:
+				iCount = int64(v)
+
+			}
+
+			bHasCount = true
+			// 移除該 key
+			delete(Data, "Count")
+		}
+
+		var itemSid int64
+		bOk, itemSid, _ = CSQL.InsertTb(C.SQL_TABLE.GameItem(), Data, &sError, false)
+
+		if bOk && bHasCount {
+			item := C.DataGameItem{}
+			C.MapToStruct(Data, &item)
+
+			itemCount := C.DataItemCount{
+				GameSid:     item.GameSid,
+				GameItemSid: strconv.FormatInt(itemSid, 10),
+				Name:        item.Name,
+				TotalCount:  iCount,
+			}
+
+			tmpMap = C.StructToMap(itemCount)
+
+			dataCount := make(map[string]interface{})
+			bOk, _, dataCount = CSQL.InsertTb(C.SQL_TABLE.GameItemCount(), tmpMap, &sError, false)
+
+			UpdateQueryCount(dataCount)
+		}
+
+		sOkMsg = "商品新增成功"
+
+	case iAction == C.DEL_GAME_ITEM:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.GameItem(), tmpIn, &sError)
+		if bOk {
+			tmpMap["GameItemSid"] = Data["Sid"]
+			CSQL.DelFromTb(C.SQL_TABLE.GameItemCount(), tmpMap, &sError)
+			CSQL.DelFromTb(C.SQL_TABLE.QueryCount(), tmpMap, &sError)
+		}
+
+		sOkMsg = "商品刪除成功"
 
 	case iAction == C.EDIT_GAME_ITEM:
 		fmt.Println("Edit game item:")
@@ -368,8 +485,8 @@ func ImplementRecall(data CData) CData {
 		if !bHasList {
 			d := make(map[string]interface{})
 			d["Sid"] = Data["Sid"]
-
-			bOk = CSQL.UpdateTb(C.SQL_TABLE.GameItem(), d, Data, &error)
+			Data["Count"] = nil
+			bOk = CSQL.UpdateTb(C.SQL_TABLE.GameItem(), d, Data, &sError)
 
 		} else {
 
@@ -393,7 +510,7 @@ func ImplementRecall(data CData) CData {
 				}
 
 				listMap, _ := C.ToListMap(data.ListData)
-				bOk = CSQL.BatchUpdateTb(C.SQL_TABLE.GameItem(), listConditions, listMap, &error)
+				bOk = CSQL.BatchUpdateTb(C.SQL_TABLE.GameItem(), listConditions, listMap, &sError)
 
 			} else {
 
@@ -406,9 +523,9 @@ func ImplementRecall(data CData) CData {
 					}
 					tmp := make(map[string]interface{})
 					tmp["Sid"] = tmpMap["Sid"]
-
+					tmp["Count"] = nil
 					// 假設 CSQL.UpdateTb 是一個用來更新數據表的Go函數
-					b := CSQL.UpdateTb("GameItem", tmp, tmpMap, &error)
+					b := CSQL.UpdateTb("GameItem", tmp, tmpMap, &sError)
 					if !b {
 						bOk = false
 					}
@@ -418,8 +535,255 @@ func ImplementRecall(data CData) CData {
 
 		}
 
-		sOkMsg = "修改完成"
+		sOkMsg = "商品修改完成"
 		fmt.Println(sOkMsg)
+
+	case iAction == C.ADD_ITEM_COUNT:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GameItemCount(), Data, &sError, false)
+		sOkMsg = "新增成功"
+		if bOk {
+			go UpdateQueryCount(Data)
+		}
+
+	case iAction == C.DEL_ITEM_COUNT:
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.GameItemCount(), Data, &sError)
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.QueryCount(), Data, &sError)
+		sOkMsg = "刪除成功"
+
+	case iAction == C.EDIT_ITEM_COUNT:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.GameItemCount(), tmpIn, Data, &sError)
+		sOkMsg = "修改成功"
+		if bOk {
+			go UpdateQueryCount(Data)
+		}
+
+	case iAction == C.ADD_BULLETIN:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.Bulletin(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.DEL_BULLETIN:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.Bulletin(), tmpIn, &sError)
+		sOkMsg = "刪除成功"
+
+	case iAction == C.EDIT_BULLETIN:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.Bulletin(), tmpIn, Data, &sError)
+		sOkMsg = "修改完成"
+
+	case iAction == C.ADD_CUSTOM_CLASS:
+		Data["Type"] = "group"
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.CustomerClass(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.DEL_CUSTOM_CLASS:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.CustomerClass(), tmpIn, &sError)
+		sOkMsg = "刪除成功"
+
+	case iAction == C.EDIT_CUSTOM_CLASS:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.CustomerClass(), tmpIn, Data, &sError)
+		sOkMsg = "修改完成"
+
+	case iAction == C.ADD_FACTORY_CLASS:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.FactoryClass(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.DEL_FACTORY_CLASS:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.FactoryClass(), tmpIn, &sError)
+		sOkMsg = "刪除成功"
+
+	case iAction == C.EDIT_FACTORY_CLASS:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.FactoryClass(), tmpIn, Data, &sError)
+		sOkMsg = "修改完成"
+
+	case iAction == C.ADD_PAY_TYPE:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.PayType(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.DEL_PAY_TYPE:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.PayType(), tmpIn, &sError)
+		sOkMsg = "刪除成功"
+
+	case iAction == C.EDIT_PAY_TYPE:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.PayType(), tmpIn, Data, &sError)
+		sOkMsg = "修改完成"
+
+		// case iAction == C.ADD_GROUP:
+		// 	bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GroupData(), Data, &sError, false)
+		// 	sOkMsg = "新增成功"
+
+		// case iAction == C.DEL_GROUP:
+		// 	tmpIn["Sid"] = Data["Sid"]
+		// 	bOk = CSQL.DelFromTb(C.SQL_TABLE.GroupData(), tmpIn, &sError)
+		// 	sOkMsg = "刪除成功"
+
+		// case iAction == C.EDIT_GROUP:
+		// 	tmpIn["Sid"] = Data["Sid"]
+		// 	bOk = CSQL.UpdateTb(C.SQL_TABLE.GroupData(), tmpIn, Data, &sError)
+		// 	sOkMsg = "修改完成"
+
+	case iAction == C.ADD_BOUNS:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.UserBonus(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.ADD_SCHEDULE:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.Schedule(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.ADD_EXCHANGE:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.ExchangeRate(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.ADD_PRIMERATE:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.PrimeCostRate(), Data, &sError, false)
+		sOkMsg = "新增成功"
+
+	case iAction == C.UPLOAD_PIC:
+		go UploadPic(Data)
+		bOk = true
+
+	case iAction == C.ADD_DEBIT_CLASS:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.DebitClass(), Data, &sError, false)
+		sOkMsg = "支付管道新增完成"
+
+	case iAction == C.DEL_DEBIT_CLASS:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.DelFromTb(C.SQL_TABLE.DebitClass(), tmpIn, &sError)
+		sOkMsg = "支付管道刪除成功"
+
+	case iAction == C.EDIT_DEBIT_CLASS:
+		tmpIn["Sid"] = Data["Sid"]
+		bOk = CSQL.UpdateTb(C.SQL_TABLE.DebitClass(), tmpIn, Data, &sError)
+		sOkMsg = "支付管道修改完成"
+
+	case iAction == C.PAY_ADD_COST:
+
+		var customer C.CustomerData
+		C.InterfaceToStruct(Data["CustomerData"], &customer)
+
+		fmt.Printf("AAA3 %v\n", customer)
+
+		var costData C.CustomerCost
+		C.InterfaceToStruct(Data["CostData"], &costData)
+
+		var iChangeValue float64 = 0
+		var iOldTotal float64 = 0
+		var iNewTotal float64 = 0
+		var err error
+
+		iChangeValue, err = strconv.ParseFloat(costData.ChangeValue, 64)
+		if err != nil {
+			break
+		}
+
+		tmpIn["CustomerSid"] = strconv.Itoa(customer.Sid)
+
+		tmpIn["DESC"] = "Sid"
+		tmpIn["Limit"] = "1"
+		var listOut []interface{}
+		CSQL.QueryTb(C.SQL_TABLE.CustomerCost(), tmpIn, &listOut, &sError)
+
+		if len(listOut) > 0 {
+
+			var tmp C.CustomerCost
+			C.InterfaceToStruct(listOut[0], &tmp)
+			iOldTotal, err = strconv.ParseFloat(tmp.Total, 64)
+			if err != nil {
+				break
+			}
+
+		}
+
+		iNewTotal = iOldTotal + iChangeValue
+
+		strValue := fmt.Sprintf("%.2f", iNewTotal)
+		costData.Total = strValue
+
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.CustomerCost(), C.StructToMap(costData), &sError, true)
+
+		if bOk {
+			var money C.CustomerMoney
+			var tmp = make(map[string]interface{})
+			tmp["Sid"] = customer.Sid
+			var listTmp []interface{}
+			CSQL.QueryTb(C.SQL_TABLE.CustomerMoney(), tmp, &listTmp, &sError)
+
+			if len(listTmp) > 0 {
+				C.InterfaceToStruct(listTmp[0], &money)
+			} else {
+				money.Sid = customer.Sid
+				money.Name = customer.Id
+				money.Currency = customer.Currency
+			}
+
+			money.Money = strValue
+
+			CSQL.InsertTb(C.SQL_TABLE.CustomerMoney(), C.StructToMap(money), &sError, true)
+
+		}
+
+		// bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.DebitClass(), Data, &sError, false)
+
+		sOkMsg = "加值完成\n\n加值金額:" + fmt.Sprintf("%.2f", iChangeValue) + "\n加值後金額:" + fmt.Sprintf("%.2f", iNewTotal)
+
+	case iAction == C.PAY_ORDER:
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.DebitClass(), Data, &sError, false)
+		sOkMsg = "支付管道新增完成"
+
+	case iAction == C.LAST_ORDER_ID:
+
+		sDate, ok := Data["OrderDate"].(string)
+		if ok {
+			sReId, err := CSQL.LastOrderId(sDate)
+			if err != nil {
+				sError = err.Error()
+				break
+			}
+
+			tmp := make(map[string]interface{})
+			tmp["Id"] = sReId
+
+			reList = append(reList, tmp)
+		}
+
+	case iAction == C.LAST_ORDER_NAME:
+
+		sDate, ok1 := Data["OrderDate"].(string)
+		sOwner, ok2 := Data["Owner"].(string)
+
+		if ok1 && ok2 {
+			sReId, err := CSQL.LastOrderName(sOwner, sDate)
+			if err == nil {
+				tmp := make(map[string]interface{})
+				tmp["Name"] = sReId
+				reList = append(reList, tmp)
+			} else {
+				sError = err.Error()
+				fmt.Println("Error:", err)
+				break
+			}
+		}
+
+	case iAction == C.REPLACE_ORDER:
+		var order C.OrderData
+		C.MapToStruct(Data, &order)
+		if order.Step == "0" {
+			bOk, sError = orderStep0(&order)
+			sOkMsg = "報價成功"
+		}
+
+
+		bOk,_,_ = CSQL.InsertTb(C.SQL_TABLE.OrderData(),C.StructToMap(order),&sError,true)
+		sOkMsg = "訂單送出"
 
 	default:
 		// 未知操作，可以进行相应的处理
@@ -436,11 +800,201 @@ func ImplementRecall(data CData) CData {
 	if re.Ok {
 		re.Msg = sOkMsg
 	} else {
-		re.Msg = error
+		re.Msg = sError
 	}
 
 	re.Data = reData
 
 	re.ListData = reList
 	return re
+}
+
+func UploadPic(d map[string]interface{}) {
+	var error string
+	CSQL.InsertTb(C.SQL_TABLE.PicData(), d, &error, true)
+
+}
+
+func UpdateQueryCount(Data C.VariantMap) {
+	tmpMap := make(map[string]interface{})
+	var tmpList = []interface{}{}
+	var sError string
+	tmpMap["GameItemSid"] = Data["GameItemSid"]
+
+	itemCount := C.DataItemCount{}
+	C.MapToStruct(Data, &itemCount)
+
+	dataQuery := C.DataQueryCount{
+		GameSid:      itemCount.GameSid,
+		GameItemSid:  itemCount.GameItemSid,
+		Name:         itemCount.Name,
+		TotalCount:   itemCount.TotalCount,
+		TotalSell:    itemCount.TotalSell,
+		CurrentCount: itemCount.TotalCount - itemCount.TotalSell,
+	}
+
+	tmpOk := CSQL.QueryTb(C.SQL_TABLE.QueryCount(), tmpMap, &tmpList, &sError)
+	if tmpOk {
+
+		if len(tmpList) > 0 {
+
+			CSQL.UpdateTb(C.SQL_TABLE.QueryCount(), tmpMap, C.StructToMap(dataQuery), &sError)
+		} else {
+
+			CSQL.InsertTb(C.SQL_TABLE.QueryCount(), C.StructToMap(dataQuery), &sError, true)
+		}
+
+	}
+}
+
+func updateItemPrice(sGameSid string, gameRate string) {
+
+	fRate, _ := strconv.ParseFloat(gameRate, 64)
+
+	in := make(map[string]interface{})
+	in["GameSid"] = sGameSid
+
+	listOut := []interface{}{}
+	var sError string
+	CSQL.QueryTb(C.SQL_TABLE.GameItem(), in, &listOut, &sError)
+
+	for _, v := range listOut {
+		var item C.DataGameItem
+		C.InterfaceToStruct(v, &item)
+
+		f, err := strconv.ParseFloat(item.Bonus, 64)
+		if err != nil {
+			fmt.Println("Error parsing string:", err)
+			continue
+		} else {
+			rounded := math.Ceil(f * fRate)
+			s := strconv.FormatFloat(rounded, 'f', -1, 64)
+			item.NTD = s
+			//do something
+		}
+
+	}
+
+}
+
+func getCustomer(sSid string, data *C.CustomerData) bool {
+	in := make(map[string]interface{})
+	var listOut []interface{}
+	in["Sid"] = sSid
+	var sError string
+	bOk := CSQL.QueryTb(C.SQL_TABLE.CustomerData(), in, &listOut, &sError)
+	if !bOk || len(listOut) < 1 {
+		return false
+	}
+
+	C.InterfaceToStruct(listOut[0], data)
+	return true
+}
+
+func checkItemCount(orderData *C.OrderData, listLast []C.DataItemCount, sErrorGameItemSid []string) bool {
+
+	if orderData == nil {
+		fmt.Println("order data is nil")
+		return false
+	}
+
+	listItem := orderData.GetList("Item")
+
+	for _, item := range listItem {
+		parts := strings.Split(item, ",,")
+		gameItemSid := parts[0]
+		iCount, _ := strconv.ParseInt(parts[1], 10, 64)
+
+		in := make(map[string]interface{})
+		var out []interface{}
+		in["GameItemSid"] = gameItemSid
+		in["DESC"] = "Sid"
+		in["LIMIT"] = "1"
+		var sError string
+		CSQL.QueryTb(C.SQL_TABLE.GameItemCount(), in, &out, &sError)
+
+		itemCount := C.DataItemCount{
+			GameItemSid: gameItemSid,
+			ChangeValue: 0,
+			TotalCount:  0,
+			TotalSell:   0,
+		}
+
+		if len(out) > 0 {
+			err := C.InterfaceToStruct(out[0], &itemCount)
+			if err != nil {
+				sError = err.Error()
+				fmt.Printf("err : %s \n", err.Error())
+				return false
+			}
+		}
+
+		listLast = append(listLast, itemCount)
+		iNowCount := itemCount.TotalCount - itemCount.TotalSell
+		if iCount > iNowCount {
+			sErrorGameItemSid = append(sErrorGameItemSid, gameItemSid)
+			return false
+		}
+	}
+
+	return true
+}
+
+func orderStep0(order *C.OrderData) (bool, string) {
+	var cus C.CustomerData
+
+	if !getCustomer(order.CustomerSid, &cus) {
+		return false, "報價失敗，查詢客戶資料錯誤。"
+	}
+
+	var listLast []C.DataItemCount
+	var listSt []string
+	if !checkItemCount(order, listLast, listSt) {
+		return false, "報價失敗, 商品庫存數量不足。"
+	}
+
+	order.Currency = cus.Currency
+	order.CustomerName = cus.Name
+
+	in := map[string]interface{}{
+		"Sid": order.GameSid,
+	}
+	var tmpOut []interface{}
+	var sError string
+
+	if !CSQL.QueryTb(C.SQL_TABLE.GameList(), in, &tmpOut, &sError) {
+		return false, sError
+	}
+
+	if len(tmpOut) > 0 {
+
+		var tmpMap = make(map[string]interface{})
+		C.InterFaceToMap(tmpOut[0], &tmpMap)
+
+		order.GameRate = tmpMap["GameRate"].(string)
+	} else {
+		return false, "報價失敗，查詢遊戲資料錯誤"
+	}
+	listMoney := order.GetList("Money")
+	if strings.ToUpper(order.Currency) == "NTD" {
+		//	order.Money[0] = order.Cost
+		listMoney[0] = "NTD"
+	}
+
+	cost, err := strconv.ParseFloat(order.Cost, 64) // 假设这个转换是安全的
+	if err == nil && cost == 0 {
+		//	order.Money[0] = "0"
+		listMoney[0] = "0"
+	}
+
+	order.SetList("Money", listMoney)
+
+	if len(order.StepTime) > 0 {
+
+		list := order.GetList("StepTime")
+		list[0]=time.Now().UTC().Add(time.Minute * 8).Format("20060102150405")
+		order.SetList("StepTime",list) 
+	}
+
+	return true, ""
 }

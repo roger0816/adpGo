@@ -10,11 +10,20 @@ import (
 
 func main() {
 
-	//test2()
-	CSQL.OpenDb("172.104.112.34", "3306", "adp", "roger", "Aa111111")
+	//args := os.Args[1:] // [1:] 可以跳過程序名稱
+
+	err := CSQL.OpenDb("172.104.112.34", "3306", "adp", "roger", "Aa111111")
+
+	if err != nil {
+		fmt.Println("open db false")
+		return
+	}
+	defer CSQL.CloseDb()
+
 	runServer()
 
 	select {}
+
 }
 
 func runServer() {
@@ -63,5 +72,29 @@ func test2() {
 	C.InterFaceToMap(myInterface, &dd2)
 
 	fmt.Println(dd2)
+
+}
+
+func test3(){
+
+	var d C.OrderData
+
+	d.Money="AAAA;;BBBB"
+
+	var list = d.GetList("Money")
+
+	fmt.Printf("ddd0 %v \n",list)
+
+	list = append(list, "CCCC")
+
+	d.SetList("Money",list)
+
+	fmt.Printf("ddd1 %v \n",d)
+
+	d.AppendToList("Money", "DDDD")
+
+	
+	
+
 
 }

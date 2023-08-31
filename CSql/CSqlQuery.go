@@ -6,7 +6,8 @@ import (
 	"log"
 	"strings"
 	"time"
-
+	"strconv"
+	"encoding/json"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -34,15 +35,21 @@ func OpenDb(ip, port, dbName, username, password string) error {
 		return err
 	}
 
-	err = m_db.Ping()
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
+	// err = m_db.Ping()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// 	return err
+	// }
 	m_db.SetMaxOpenConns(200)
 	m_db.SetMaxIdleConns(100)
 	fmt.Println("Connected to MySQL database!")
 	return nil
+}
+
+func CloseDb() {
+	if m_db != nil {
+		m_db.Close()
+	}
 }
 
 func Init(listTableName []string, updateTimeKey string) {
@@ -74,6 +81,12 @@ func QueryTb(tableName string, conditions map[string]interface{}, listOut *[]int
 
 func BaseQuery(tableName string, conditions map[string]interface{}, listOut *[]interface{}, sError *string, UseMainDb bool) bool {
 	*listOut = nil
+
+	for k, v := range conditions {
+		if v == nil {
+			delete(conditions, k)
+		}
+	}
 
 	query := "SELECT * FROM " + tableName
 	args := make([]interface{}, 0)
@@ -129,7 +142,7 @@ func BaseQuery(tableName string, conditions map[string]interface{}, listOut *[]i
 		sSub += sLimit
 	}
 
-	fmt.Printf("sql query : %s \n", query+sSub)
+//	fmt.Printf("sql query : %s \n", query+sSub)
 
 	var stmt *sql.Stmt
 	var err error
@@ -146,6 +159,7 @@ func BaseQuery(tableName string, conditions map[string]interface{}, listOut *[]i
 	}
 	defer stmt.Close()
 
+	fmt.Printf("sql query : %s \n", interpolateQuery(query+sSub, args))
 	rows, err := stmt.Query(args...)
 	if err != nil {
 		log.Println("Error executing query:", err)
@@ -249,6 +263,22 @@ func UpdateTb(sTableName string, conditions, data map[string]interface{}, sError
 	sCmd := "UPDATE " + sTableName + " SET "
 
 	sDateTime := CurrentTime()
+
+	for k, v := range conditions {
+		if v == nil {
+			delete(conditions, k)
+		}
+	}
+
+	for k, v := range data {
+		if v == nil {
+			delete(data, k)
+		}
+	}
+
+	if len(data) < 1 {
+		return false
+	}
 
 	if sTableName != "LastUpdateTime" {
 		data["UpdateTime"] = sDateTime
@@ -447,28 +477,39 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 func InsertTb(sTableName string, input map[string]interface{}, sError *string, bOrReplace bool) (bool, int64, map[string]interface{}) {
 	data := input
 
+	fmt.Printf("DD0 : %v\n", input)
 	sDateTime := CurrentTime()
 
 	if sTableName != "LastUpdateTime" {
 		data["UpdateTime"] = sDateTime // 使用 "updateTime"，確保大小寫正確
 	}
 	var listKey []string
-	for k := range data {
-		listKey = append(listKey, k)
-	}
-
-	if val, ok := data["Sid"]; ok {
-		switch v := val.(type) {
-		case string:
-			if v == "" {
-				delete(data, "Sid")
+	for k, v := range data {
+		// 如果v是string類型且不是空字符串，或者v不是string且不是nil
+		if str, ok := v.(string); ok {
+			if str != "" {
+				listKey = append(listKey, k)
 			}
-		case int:
-			// No action required for int values
-		default:
-			log.Fatalf("Sid has unexpected type: %T", v)
+		} else if v != nil {
+			listKey = append(listKey, k)
 		}
 	}
+
+	// if val, ok := data["Sid"]; ok {
+	// 	switch v := val.(type) {
+	// 	case string:
+	// 		if v == "" {
+	// 			delete(data, "Sid")
+	// 		}
+	// 	case int:
+	// 		if v <= 0 {
+	// 			delete(data, "Sid")
+	// 		}
+	// 		// No action required for int values
+	// 	default:
+	// 		log.Fatalf("Sid has unexpected type: %T", v)
+	// 	}
+	// }
 
 	operation := "INSERT"
 	if bOrReplace {
@@ -503,6 +544,7 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 		}
 	}
 	// Capture the result after execution
+	fmt.Printf("sql insert : %s \n", interpolateQuery(sCmd, args))
 	result, err := query.Exec(args...)
 	if err != nil {
 		*sError = err.Error()
@@ -539,12 +581,31 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 	}
 
 	resultData := make(map[string]interface{})
+
+	/*
 	for i, colName := range columns {
 		val := values[i]
 		resultData[colName] = val
 	}
-
+	fmt.Printf("DD1 : %v\n", resultData)
 	setLastUpdateTime(sTableName, sDateTime)
+
+	for key, value := range resultData {
+		fmt.Printf("Key: %v, Value: %v, Type: %T\n", key, value, value)
+	}
+	*/
+	var tmp = make(map[string]interface{})
+	tmp["Sid"]=lastInsertID
+
+	var listOut = []interface{}{}
+	var tmpErr string
+	QueryTb(sTableName,tmp,&listOut,&tmpErr)
+
+	if len(listOut) >0 {
+		interFaceToMap(listOut[0],&resultData)
+		fmt.Printf("DD4 : %v\n", resultData)
+	}
+
 
 	return true, lastInsertID, resultData
 }
@@ -625,7 +686,7 @@ func setLastUpdateTime(tableName string, sDateTime string) {
 
 }
 
-func LastCustomerId(sClassSid, sClassId string,sError *string) (string, bool) {
+func LastCustomerId(sClassSid, sClassId string, sError *string) (string, bool) {
 	out := sClassId + "-EA00"
 
 	queryStr := "SELECT Id FROM CustomerData WHERE Class=? ORDER BY Id DESC"
@@ -637,7 +698,7 @@ func LastCustomerId(sClassSid, sClassId string,sError *string) (string, bool) {
 		if err == sql.ErrNoRows {
 			return out, true
 		}
-        *sError =err.Error()
+		*sError = err.Error()
 		return out, false
 	}
 
@@ -667,4 +728,95 @@ func getLastUpdateTime(tableName string) string {
 	}
 
 	return re
+}
+
+func LastCustomerAddCostID() (string, bool) {
+
+	location, err0 := time.LoadLocation("Asia/Taipei") // Taipei is in the UTC+8 timezone
+	if err0 != nil {
+		panic(err0)
+	}
+
+	sDate := time.Now().In(location).Format("20060102")
+
+	var id string
+	tmpDate := sDate[2:]
+	defaultID := tmpDate + "-0000"
+	query := fmt.Sprintf("SELECT * FROM CustomerCost WHERE OrderTime LIKE '%%%s%%' ORDER BY OrderId DESC;", sDate)
+
+	row := db().QueryRow(query)
+	err := row.Scan(&id) // Assuming OrderId is the first column, adjust accordingly if not.
+	if err == sql.ErrNoRows {
+		return defaultID, false
+	}
+	if err != nil {
+		return "", false
+	}
+
+	return id, true
+}
+
+func interFaceToMap(in interface{}, out *map[string]interface{}) {
+	bytes, _ := json.Marshal(in)
+	json.Unmarshal(bytes, &out)
+}
+
+func interpolateQuery(query string, args []interface{}) string {
+    for _, arg := range args {
+        switch v := arg.(type) {
+        case string:
+            query = strings.Replace(query, "?", "'"+v+"'", 1)
+        case int:
+            query = strings.Replace(query, "?", strconv.Itoa(v), 1)
+        case float64:
+            query = strings.Replace(query, "?", fmt.Sprintf("%f", v), 1)
+        // ... 其他数据类型，根据需要添加
+        default:
+            query = strings.Replace(query, "?", fmt.Sprintf("%v", v), 1)
+        }
+    }
+    return query
+}
+
+func LastOrderId(sDate string) (string, error) {
+	tmpDate := sDate[2:]
+	sId := tmpDate + "-A000"
+
+	sCmd := fmt.Sprintf("SELECT Id FROM OrderData WHERE OrderDate='%s' AND Id!='' ORDER BY Id DESC LIMIT 1", sDate)
+
+	fmt.Println("cmd: ", sCmd)
+
+	row := db().QueryRow(sCmd)
+
+	var id sql.NullString
+	if err := row.Scan(&id); err != nil {
+		return sId, err
+	}
+
+	if id.Valid {
+		sId = id.String
+	}
+
+	return sId, nil
+}
+
+func LastOrderName(ownerSid string, date string) (string, error) {
+	cmd := fmt.Sprintf("SELECT Name FROM OrderData WHERE OrderDate='%s' AND Owner='%s' ORDER BY Id DESC", date, ownerSid)
+
+	fmt.Println("cmd:", cmd)
+
+	rows, err := db().Query(cmd)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var name string
+	if rows.Next() {
+		if err := rows.Scan(&name); err != nil {
+			return "", err
+		}
+	}
+
+	return name, nil
 }

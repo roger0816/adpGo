@@ -25,7 +25,6 @@ func JsonStrToMap(str string) map[string]interface{} {
 	return tempMap
 }
 
-
 // map TO Interface  ,    interface =map
 func InterFaceToMap(in interface{}, out *map[string]interface{}) {
 	bytes, _ := json.Marshal(in)
@@ -70,7 +69,7 @@ func InterfaceToInt(data interface{}) int {
 		tmp, _ := strconv.Atoi(v)
 		return tmp
 	default:
-		fmt.Errorf("invalid type for conversion to int: %T", v)
+		fmt.Printf("invalid type for conversion to int: %T", v)
 		return 0
 	}
 }
@@ -81,29 +80,61 @@ func (v *VariantMap) Origin() *map[string]interface{} {
 	return (*map[string]interface{})(v)
 }
 
-
-
 func (v VariantMap) ToInterface() interface{} {
 	var re interface{} = v
 	return re
 }
 
-func (v VariantMap) ToStruct(target interface{}) {
-	targetValue := reflect.ValueOf(target)
-	if targetValue.Kind() != reflect.Ptr || targetValue.Elem().Kind() != reflect.Struct {
-		fmt.Println("Invalid target type")
-		return
+func InterfaceToStruct(input interface{}, output interface{}) error {
+
+	fmt.Printf("AAA1 %v \n", input)
+
+	data, ok := input.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("input is not a map[string]interface{}")
 	}
 
-	for fieldName, fieldValue := range v {
-		field := targetValue.Elem().FieldByName(fieldName)
-		if field.IsValid() && field.CanSet() {
-			field.Set(reflect.ValueOf(fieldValue))
+	val := reflect.ValueOf(output)
+	if val.Kind() != reflect.Ptr || val.IsNil() {
+		return fmt.Errorf("output should be a non-nil pointer")
+	}
+	val = val.Elem()
+
+	if val.Kind() != reflect.Struct {
+		fmt.Printf("Expected a struct but got: %v\n", val.Kind())
+		return fmt.Errorf("output should be a pointer to a struct")
+	}
+
+	missingFields := []string{}  // 创建一个切片来记录不存在的字段
+
+	for k, v := range data {
+		field, exists := val.Type().FieldByName(k) // 检查字段是否存在
+		if !exists {
+			missingFields = append(missingFields, k)  // 如果字段不存在，将其添加到切片中
+            continue
+		}
+
+		if field.Type.Kind() == reflect.Int && reflect.TypeOf(v).Kind() == reflect.String {
+			// 如果结构体字段是int类型，但数据中的值是string类型
+			intValue, err := strconv.Atoi(v.(string))
+			if err != nil {
+				return fmt.Errorf("error converting field %s from string to int: %v", k, err)
+			}
+			data[k] = intValue
 		}
 	}
+
+	if len(missingFields) > 0 {
+        //return fmt.Errorf("the following fields do not exist in the struct: %v", missingFields)
+		fmt.Printf("the following fields do not exist in the struct: %v\n", missingFields)
+		
+    }
+	fmt.Printf("AAA2 %v \n", data)
+
+	return MapToStruct(data, output)
 }
 
-func mapToStruct(data map[string]interface{}, target interface{}) {
+func MapToStructByName(data map[string]interface{}, target interface{}) {
 	val := reflect.ValueOf(target).Elem()
 
 	for key, value := range data {
@@ -112,6 +143,33 @@ func mapToStruct(data map[string]interface{}, target interface{}) {
 			field.Set(reflect.ValueOf(value))
 		}
 	}
+}
+
+func MapToStruct(data map[string]interface{}, outputStruct interface{}) error {
+
+	// 對於特定的鍵（例如Sid），進行預處理轉換
+	// if sidValue, ok := data["Sid"]; ok {
+	// 	switch sid := sidValue.(type) {
+	// 	case int, int64:
+	// 		data["Sid"] = fmt.Sprintf("%d", sid)
+	// 		// case float64:
+	// 		//     data["Sid"] = fmt.Sprintf("%.0f", sid)
+	// 	case float64:
+	// 		data["Sid"] = fmt.Sprintf("%d", int64(v)) // 轉為 int64，移除小數部分
+	// 	}
+	// }
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(jsonData, outputStruct)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func StructToMap(item interface{}) map[string]interface{} {
@@ -141,22 +199,19 @@ func StructToMap(item interface{}) map[string]interface{} {
 	return result
 }
 
-
-
 func ToListMap(listData []interface{}) ([]map[string]interface{}, error) {
-    var convertedListData []map[string]interface{}
+	var convertedListData []map[string]interface{}
 
-    for _, item := range listData {
-        if mapData, ok := item.(map[string]interface{}); ok {
-            convertedListData = append(convertedListData, mapData)
-        } else {
-            return nil, fmt.Errorf("Unexpected data format in ListData")
-        }
-    }
+	for _, item := range listData {
+		if mapData, ok := item.(map[string]interface{}); ok {
+			convertedListData = append(convertedListData, mapData)
+		} else {
+			return nil, fmt.Errorf("Unexpected data format in ListData")
+		}
+	}
 
-    return convertedListData, nil
+	return convertedListData, nil
 }
-
 
 // -------
 func (v VariantMap) Map(key string) VariantMap {

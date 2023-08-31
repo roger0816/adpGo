@@ -123,7 +123,7 @@ type GroupData struct {
 }
 
 type CustomerGameInfo struct {
-	Sid           string `json:"Sid" structs:"Sid"`
+	Sid           int    `json:"Sid" structs:"Sid"`
 	Id            string `json:"Id" structs:"Id"`
 	Name          string `json:"Name" structs:"Name"`
 	UpdateTime    string `json:"UpdateTime" structs:"UpdateTime"`
@@ -140,42 +140,123 @@ type CustomerGameInfo struct {
 }
 
 type OrderData struct {
-	Sid              string   `json:"Sid" structs:"Sid"`
-	Id               string   `json:"Id" structs:"Id"`
-	Name             string   `json:"Name" structs:"Name"`
-	UpdateTime       string   `json:"UpdateTime" structs:"UpdateTime"`
-	CustomerSid      string   `json:"CustomerSid" structs:"CustomerSid"`
-	UiRecord         string   `json:"UiRecord" structs:"UiRecord"`
-	Step             string   `json:"Step" structs:"Step"`
-	StepTime         []string `json:"StepTime" structs:"StepTime"`
-	User             []string `json:"User" structs:"User"`
-	Owner            string   `json:"Owner" structs:"Owner"`
-	PaddingUser      string   `json:"PaddingUser" structs:"PaddingUser"`
-	GameSid          string   `json:"GameSid" structs:"GameSid"`
-	Item             string   `json:"Item" structs:"Item"`
-	Cost             string   `json:"Cost" structs:"Cost"`
-	Bouns            string   `json:"Bouns" structs:"Bouns"`
-	PayType          string   `json:"PayType" structs:"PayType"`
-	CanSelectPayType string   `json:"CanSelectPayType" structs:"CanSelectPayType"`
-	GameRate         string   `json:"GameRate" structs:"GameRate"`
-	ExRateSid        string   `json:"ExRateSid" structs:"ExRateSid"`
-	PrimeRateSid     string   `json:"PrimeRateSid" structs:"PrimeRateSid"`
-	Money            []string `json:"Money" structs:"Money"`
-	Note0            []string `json:"Note0" structs:"Note0"`
-	ListCost         []string `json:"ListCost" structs:"ListCost"`
-	ListBouns        []string `json:"ListBouns" structs:"ListBouns"`
-	ItemInfo         []string `json:"ItemInfo" structs:"ItemInfo"`
-	Note1            string   `json:"Note1" structs:"Note1"`
-	Note2            string   `json:"Note2" structs:"Note2"`
-	Note3            string   `json:"Note3" structs:"Note3"`
-	Note4            string   `json:"Note4" structs:"Note4"`
-	Note5            string   `json:"Note5" structs:"Note5"`
-	Pic0             string   `json:"Pic0" structs:"Pic0"`
-	Pic1             string   `json:"Pic1" structs:"Pic1"`
-	OrderDate        string   `json:"OrderDate" structs:"OrderDate"`
-	OrderTime        string   `json:"OrderTime" structs:"OrderTime"`
-	CustomerName     string   `json:"CustomerName" structs:"CustomerName"`
-	Currency         string   `json:"Currency" structs:"Currency"`
+	Sid              int    `json:"Sid" structs:"Sid"`
+	Id               string `json:"Id" structs:"Id"`
+	Name             string `json:"Name" structs:"Name"`
+	UpdateTime       string `json:"UpdateTime" structs:"UpdateTime"`
+	CustomerSid      string `json:"CustomerSid" structs:"CustomerSid"`
+	UiRecord         string `json:"UiRecord" structs:"UiRecord"`
+	Step             string `json:"Step" structs:"Step"`
+	StepTime         string `json:"StepTime" structs:"StepTime"`
+	User             string `json:"User" structs:"User"`
+	Owner            string `json:"Owner" structs:"Owner"`
+	PaddingUser      string `json:"PaddingUser" structs:"PaddingUser"`
+	GameSid          string `json:"GameSid" structs:"GameSid"`
+	Item             string `json:"Item" structs:"Item"`
+	Cost             string `json:"Cost" structs:"Cost"`
+	Bouns            string `json:"Bouns" structs:"Bouns"`
+	PayType          string `json:"PayType" structs:"PayType"`
+	CanSelectPayType string `json:"CanSelectPayType" structs:"CanSelectPayType"`
+	GameRate         string `json:"GameRate" structs:"GameRate"`
+	ExRateSid        string `json:"ExRateSid" structs:"ExRateSid"`
+	PrimeRateSid     string `json:"PrimeRateSid" structs:"PrimeRateSid"`
+	Money            string `json:"Money" structs:"Money"`
+	Note0            string `json:"Note0" structs:"Note0"`
+	ListCost         string `json:"ListCost" structs:"ListCost"`
+	ListBouns        string `json:"ListBouns" structs:"ListBouns"`
+	ItemInfo         string `json:"ItemInfo" structs:"ItemInfo"`
+	Note1            string `json:"Note1" structs:"Note1"`
+	Note2            string `json:"Note2" structs:"Note2"`
+	Note3            string `json:"Note3" structs:"Note3"`
+	Note4            string `json:"Note4" structs:"Note4"`
+	Note5            string `json:"Note5" structs:"Note5"`
+	Pic0             string `json:"Pic0" structs:"Pic0"`
+	Pic1             string `json:"Pic1" structs:"Pic1"`
+	OrderDate        string `json:"OrderDate" structs:"OrderDate"`
+	OrderTime        string `json:"OrderTime" structs:"OrderTime"`
+	CustomerName     string `json:"CustomerName" structs:"CustomerName"`
+	Currency         string `json:"Currency" structs:"Currency"`
+}
+
+func (d *OrderData) SetList(sKey string, listData []string) {
+	//因為這些用;; 間隔
+
+	for len(listData) < 6 {
+		listData = append(listData, "")
+	}
+
+	var str string
+	if sKey == "StepTime" || sKey == "User" {
+		str = strings.Join(listData, ",")
+	} else {
+		str = strings.Join(listData, ";;")
+	}
+	// // 雖然可以用反射，但不是每個都可以切的，想明碼
+	// rv := reflect.ValueOf(d).Elem()
+	// fieldValue := rv.FieldByName(sKey)
+	// if fieldValue.IsValid() && fieldValue.CanSet() {
+	// 	fieldValue.SetString(str)
+	// }
+
+	switch sKey {
+	case "StepTime":
+		d.StepTime = str
+	case "User":
+		d.User = str
+	case "Item":
+		d.Item = str
+	case "Money":
+		d.Money = str
+	case "Note0":
+		d.Note0 = str
+	case "ListCost":
+		d.ListCost = str
+	case "ListBouns":
+		d.ListBouns = str
+	case "ItemInfo":
+		d.ItemInfo = str
+	case "CanSelectPayType":
+		d.CanSelectPayType = str
+
+	default:
+
+	}
+
+}
+
+func (d *OrderData) GetList(sKey string) []string {
+	//因為這些用;; 間隔
+	var reList []string
+	switch sKey {
+	case "StepTime":
+		reList = strings.Split(d.StepTime, ",")
+	case "User":
+		reList = strings.Split(d.User, ",")
+
+	case "Item":
+		reList = strings.Split(d.Item, ";;")
+	case "Money":
+		reList = strings.Split(d.Money, ";;")
+	case "Note0":
+		reList = strings.Split(d.Note0, ";;")
+	case "ListCost":
+		reList = strings.Split(d.ListCost, ";;")
+	case "ListBouns":
+		reList = strings.Split(d.ListBouns, ";;")
+	case "ItemInfo":
+		reList = strings.Split(d.ItemInfo, ";;")
+	case "CanSelectPayType":
+		reList = strings.Split(d.CanSelectPayType, ";;")
+
+	}
+
+	return reList
+}
+
+func (d *OrderData) AppendToList(sKey string, value string) {
+	list := d.GetList(sKey)
+	list = append(list, value)
+	d.SetList(sKey, list)
 }
 
 type DataFactory struct {
@@ -188,44 +269,23 @@ type DataFactory struct {
 }
 
 type DataGameList struct {
-	Sid        string  `json:"Sid" structs:"Sid"`
-	Id         string  `json:"Id" structs:"Id"`
-	Name       string  `json:"Name" structs:"Name"`
-	UpdateTime string  `json:"UpdateTime" structs:"UpdateTime"`
-	Enable     bool    `json:"Enable" structs:"Enable"`
+	Sid        int    `json:"Sid" structs:"Sid"`
+	Id         string `json:"Id" structs:"Id"`
+	Name       string `json:"Name" structs:"Name"`
+	UpdateTime string `json:"UpdateTime" structs:"UpdateTime"`
+	Enable     bool   `json:"Enable" structs:"Enable"`
 	GameRate   string `json:"GameRate" structs:"GameRate"`
-	UserSid    string  `json:"UserSid" structs:"UserSid"`
-	SellNote   string  `json:"SellNote" structs:"SellNote"`
+	UserSid    string `json:"UserSid" structs:"UserSid"`
+	SellNote   string `json:"SellNote" structs:"SellNote"`
 }
 
 type DataGameRate struct {
-	Sid        string `json:"Sid" structs:"Sid"`
+	Sid        int    `json:"Sid" structs:"Sid"`
 	GameSid    string `json:"GameSid" structs:"GameSid"`
 	GameName   string `json:"GameName" structs:"GameName"`
 	Rate       string `json:"Rate" structs:"Rate"`
 	UserSid    string `json:"UserSid" structs:"UserSid"`
 	UpdateTime string `json:"UpdateTime" structs:"UpdateTime"`
-}
-
-func (D DataGameRate) SetData(data map[string]interface{}) {
-	D.Sid = ToString(data["Sid"])
-	D.GameSid = ToString(data["GameSid"])
-	D.GameName = ToString(data["GameName"])
-	D.Rate = ToString(data["Rate"])
-	D.UserSid = ToString(data["UserSid"])
-	D.UpdateTime = ToString(data["UpdateTime"])
-}
-
-func (D DataGameRate) Data() map[string]interface{} {
-	var re map[string]interface{}
-	re["Sid"] = D.Sid
-	re["GameSid"] = D.GameSid
-	re["GameName"] = D.GameName
-	re["Rate"] = D.Rate
-	re["UserSid"] = D.UserSid
-	re["UpdateTime"] = D.UpdateTime
-
-	return re
 }
 
 type DataGameItem struct {
@@ -257,7 +317,7 @@ type DataRate struct {
 }
 
 type DataItemCount struct {
-	Sid         string `json:"Sid" structs:"Sid"`
+	Sid         int    `json:"Sid" structs:"Sid"`
 	Id          string `json:"Id" structs:"Id"`
 	Name        string `json:"Name" structs:"Name"`
 	UpdateTime  string `json:"UpdateTime" structs:"UpdateTime"`
@@ -272,6 +332,19 @@ type DataItemCount struct {
 	Pic0        string `json:"Pic0" structs:"Pic0"`
 	Pic1        string `json:"Pic1" structs:"Pic1"`
 	Note        string `json:"Note" structs:"Note"`
+}
+
+type DataQueryCount struct {
+	Sid          int    `json:"Sid" structs:"Sid"`
+	Id           string `json:"Id" structs:"Id"`
+	GameSid      string `json:"GameSid" structs:"GameSid"`
+	GameItemSid  string `json:"GameItemSid" structs:"GameItemSid"`
+	Name         string `json:"Name" structs:"Name"`
+	CurrentCount int64  `json:"CurrentCount" structs:"CurrentCount"`
+	TotalCount   int64  `json:"TotalCount" structs:"TotalCount"`
+	TotalSell    int64  `json:"TotalSell" structs:"TotalSell"`
+	UpdateTime   string `json:"UpdateTime" structs:"UpdateTime"`
+	Note         string `json:"Note" structs:"Note"`
 }
 
 type DataPayType struct {
@@ -294,58 +367,58 @@ type CListPair []struct {
 //======================
 
 func SetData(data map[string]interface{}, target interface{}) {
-    valueOf := reflect.ValueOf(target).Elem()
-    typeOf := valueOf.Type()
+	valueOf := reflect.ValueOf(target).Elem()
+	typeOf := valueOf.Type()
 
-    for i := 0; i < typeOf.NumField(); i++ {
-        field := typeOf.Field(i)
-        tag := field.Tag.Get("json")
-        tags := strings.Split(tag, ",")
-        if len(tags) == 0 {
-            continue
-        }
-        val, ok := data[tags[0]]
-        if !ok {
-            continue
-        }
+	for i := 0; i < typeOf.NumField(); i++ {
+		field := typeOf.Field(i)
+		tag := field.Tag.Get("json")
+		tags := strings.Split(tag, ",")
+		if len(tags) == 0 {
+			continue
+		}
+		val, ok := data[tags[0]]
+		if !ok {
+			continue
+		}
 
-        fieldValue := valueOf.Field(i)
-        if !fieldValue.CanSet() {
-            continue
-        }
+		fieldValue := valueOf.Field(i)
+		if !fieldValue.CanSet() {
+			continue
+		}
 
-        fmt.Printf("Field: %s, Value: %v, Type: %T\n", tags[0], val, val)  // 添加的调试语句
+		fmt.Printf("Field: %s, Value: %v, Type: %T\n", tags[0], val, val) // 添加的调试语句
 
-        switch fieldValue.Interface().(type) {
-        case bool:
-            boolVal, ok := val.(bool)
-            if ok {
-                fieldValue.SetBool(boolVal)
-            }
-        case float64:
-            floatVal, ok := val.(float64)
-            if ok {
-                fieldValue.SetFloat(floatVal)
-            }
-        case int:
-            switch v := val.(type) {
-            case string:
-                intVal, err := strconv.Atoi(v)
-                if err == nil {
-                    fieldValue.SetInt(int64(intVal))
-                }
-            case float64:
-                fieldValue.SetInt(int64(v))
-            }
-        case string:
-            strVal, ok := val.(string)
-            if ok {
-                fieldValue.SetString(strVal)
-            }
-        default:
-            fmt.Printf("Unhandled type for field %s: %T\n", tags[0], val) // 添加的调试语句
-        }
-    }
+		switch fieldValue.Interface().(type) {
+		case bool:
+			boolVal, ok := val.(bool)
+			if ok {
+				fieldValue.SetBool(boolVal)
+			}
+		case float64:
+			floatVal, ok := val.(float64)
+			if ok {
+				fieldValue.SetFloat(floatVal)
+			}
+		case int:
+			switch v := val.(type) {
+			case string:
+				intVal, err := strconv.Atoi(v)
+				if err == nil {
+					fieldValue.SetInt(int64(intVal))
+				}
+			case float64:
+				fieldValue.SetInt(int64(v))
+			}
+		case string:
+			strVal, ok := val.(string)
+			if ok {
+				fieldValue.SetString(strVal)
+			}
+		default:
+			fmt.Printf("Unhandled type for field %s: %T\n", tags[0], val) // 添加的调试语句
+		}
+	}
 }
 func GetData(target interface{}) map[string]interface{} {
 	data := make(map[string]interface{})
