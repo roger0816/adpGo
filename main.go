@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	Adp "github.com/roger0816/adpGo/Adp"
 	CSQL "github.com/roger0816/adpGo/CSql"
 	C "github.com/roger0816/adpGo/Common"
 	NETWORK "github.com/roger0816/adpGo/RpkNetwork"
@@ -27,7 +28,7 @@ func main() {
 }
 
 func runServer() {
-	go NETWORK.StartTcpServer("6005")
+	go NETWORK.StartTcpServer("6005", Adp.AdpRecaller{})
 	fmt.Println("server start 6005")
 	go NETWORK.StartApiServer("6004")
 
@@ -75,26 +76,22 @@ func test2() {
 
 }
 
-func test3(){
+func test3() {
 
 	var d C.OrderData
 
-	d.Money="AAAA;;BBBB"
+	d.Money = "AAAA;;BBBB"
 
 	var list = d.GetList("Money")
 
-	fmt.Printf("ddd0 %v \n",list)
+	fmt.Printf("ddd0 %v \n", list)
 
 	list = append(list, "CCCC")
 
-	d.SetList("Money",list)
+	d.SetList("Money", list)
 
-	fmt.Printf("ddd1 %v \n",d)
+	fmt.Printf("ddd1 %v \n", d)
 
 	d.AppendToList("Money", "DDDD")
-
-	
-	
-
 
 }

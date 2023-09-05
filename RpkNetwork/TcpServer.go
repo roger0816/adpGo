@@ -2,38 +2,54 @@ package RpkNetwork
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
 	"time"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
-const (
-	headerMaker = "@AKA404@"
-	footMaker   = "@404AKA@"
-	endMarker   = "::ENDX::"
-)
+// Step 1: 定義一個 Recaller interface
+type Recaller interface {
+	ImplementRecall(data CData) CData
+}
 
-func handleConnection(conn net.Conn) {
+// 默認的實現
+type DefaultRecaller struct{}
+
+func (d DefaultRecaller) ImplementRecall(data CData) CData {
+    // 你的默認操作
+    return data // 返回修改後的data或原始data
+}
+
+
+func handleConnection(conn net.Conn,recaller Recaller) {
 	defer conn.Close()
 
 	var buffer bytes.Buffer
 	tmp := make([]byte, 1024)
 
 	for {
+
+		// 设置读取超时
+		conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
+
 		n, err := conn.Read(tmp)
 		if err != nil {
-			fmt.Println("Error reading:", err)
+			if err == io.EOF {
+				fmt.Println("Client closed the connection")
+			} else {
+				fmt.Println("Error reading:", err)
+			}
+			conn.Close()
 			return
 		}
 
 		buffer.Write(tmp[:n])
 
-		if bytes.Contains(buffer.Bytes(), []byte(footMaker)) {
+		//if bytes.Contains(buffer.Bytes(), []byte(footMaker)) {
+		if IsPackageComplete(buffer.Bytes()) {
 			break
 		}
 	}
@@ -60,7 +76,9 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	re := ImplementRecall(decodedData)
+	//re := ImplementRecall(decodedData)
+
+	re := recaller.ImplementRecall(decodedData)
 	reEncoded, err3 := re.EncodeJSON()
 
 	if err3 != nil {
@@ -90,7 +108,8 @@ func handleConnection(conn net.Conn) {
 
 }
 
-func StartTcpServer(port string) {
+// 可以提供一個默認的實現或者允許外部提供
+func StartTcpServer(port string, recaller Recaller) {
 
 	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -107,7 +126,11 @@ func StartTcpServer(port string) {
 			fmt.Println("Error accepting connection:", err)
 			continue
 		}
-		go handleConnection(conn)
+
+		if recaller == nil {
+			recaller = DefaultRecaller{}
+		}
+		go handleConnection(conn,recaller)
 	}
 }
 
@@ -171,66 +194,4 @@ func SendTcpData(ip, port string, data CData) (CData, error) {
 	}
 
 	return response, nil
-}
-
-func Uint32ToByteArray(somevalue uint32) []byte {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, somevalue)
-	if err != nil {
-		fmt.Println("Error:", err)
-	}
-	return buf.Bytes()
-}
-
-func ByteArrayToUint32(data []byte) uint32 {
-	//return binary.LittleEndian.Uint32(data)
-	return binary.BigEndian.Uint32(data)
-}
-
-func headerByte() []byte {
-	return []byte{'@', 'A', 'K', 'A', '4', '0', '4', '@'}
-}
-
-func footByte() []byte {
-	return []byte{'@', '4', '0', '4', 'A', 'K', 'A', '@'}
-}
-
-func Package(data []byte) []byte {
-	var pdata []byte
-	//data = append(data, []byte(endMarker)...)
-	pdata = append(pdata, headerByte()...)
-	dataLength := uint32(len(data) + 20)
-	dataLengthBytes := Uint32ToByteArray(dataLength)
-
-	pdata = append(pdata, dataLengthBytes...)
-	pdata = append(pdata, data...)
-	pdata = append(pdata, footByte()...)
-	return pdata
-}
-
-func UnPackage(data []byte) []byte {
-	hb := headerByte()
-	ft := footByte()
-
-	sp := bytes.Index(data, hb)
-
-	if sp < 0 {
-		// fmt.Println("unPackage:No header", string(p.m_data))
-		return nil
-	}
-
-	ep := bytes.Index(data, ft)
-
-	if ep < 0 {
-		// fmt.Println("unPackage:No footer", string(p.m_data))
-		return nil
-	}
-
-	datavlen := ByteArrayToUint32(data[sp+8 : sp+12])
-
-	rdata := data[sp+12 : sp+12+int(datavlen)-20]
-
-	// fmt.Println("unPackage", string(rdata))
-
-	return rdata
 }

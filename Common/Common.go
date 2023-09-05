@@ -105,13 +105,13 @@ func InterfaceToStruct(input interface{}, output interface{}) error {
 		return fmt.Errorf("output should be a pointer to a struct")
 	}
 
-	missingFields := []string{}  // 创建一个切片来记录不存在的字段
+	missingFields := []string{} // 创建一个切片来记录不存在的字段
 
 	for k, v := range data {
 		field, exists := val.Type().FieldByName(k) // 检查字段是否存在
 		if !exists {
-			missingFields = append(missingFields, k)  // 如果字段不存在，将其添加到切片中
-            continue
+			missingFields = append(missingFields, k) // 如果字段不存在，将其添加到切片中
+			continue
 		}
 
 		if field.Type.Kind() == reflect.Int && reflect.TypeOf(v).Kind() == reflect.String {
@@ -125,10 +125,10 @@ func InterfaceToStruct(input interface{}, output interface{}) error {
 	}
 
 	if len(missingFields) > 0 {
-        //return fmt.Errorf("the following fields do not exist in the struct: %v", missingFields)
+		//return fmt.Errorf("the following fields do not exist in the struct: %v", missingFields)
 		fmt.Printf("the following fields do not exist in the struct: %v\n", missingFields)
-		
-    }
+
+	}
 	fmt.Printf("AAA2 %v \n", data)
 
 	return MapToStruct(data, output)
@@ -251,5 +251,11 @@ func (v VariantMap) ToList(key string) []map[string]interface{} {
 
 func TimeUtc8Str() string {
 	re := time.Now().UTC().Add(time.Hour * 8).Format("20060102150405")
+	return re
+}
+
+func PrintHHMMSS(st string) string {
+	re := time.Now().UTC().Add(time.Hour * 8).Format("15:04:05.999")
+	fmt.Printf("[%s] %s \n", re, st)
 	return re
 }

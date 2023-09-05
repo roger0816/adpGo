@@ -1,21 +1,21 @@
-package RpkNetwork
+package Adp
 
 import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"math"
 	"strconv"
-	"strings"
-	"time"
 
 	CSQL "github.com/roger0816/adpGo/CSql"
 	C "github.com/roger0816/adpGo/Common"
+	NETWORK "github.com/roger0816/adpGo/RpkNetwork"
 )
 
 var LoginUser = make(map[string]interface{})
 
-func ImplementRecall(data CData) CData {
+type AdpRecaller struct{}
+
+func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	var reData C.VariantMap = make(map[string]interface{})
 	reList := []interface{}{}
@@ -51,6 +51,9 @@ func ImplementRecall(data CData) CData {
 		bOk = true
 
 	case iAction == C.LOGIN:
+
+		C.PrintHHMMSS("A0")
+
 		fmt.Println("login")
 		//conditions:=[string]interface
 		//CSQL.QueryTb(tableName, conditions, listOut, sError)
@@ -63,7 +66,7 @@ func ImplementRecall(data CData) CData {
 				"Id":       data.ListData[0],
 				"Password": data.ListData[1],
 			}
-
+			C.PrintHHMMSS("A1")
 			tmpB := CSQL.QueryTb(C.SQL_TABLE.UserData(), in, &reList, &sError)
 
 			if tmpB {
@@ -71,23 +74,24 @@ func ImplementRecall(data CData) CData {
 			}
 
 			if len(reList) > 0 {
-
+				C.PrintHHMMSS("A2")
 				strBytes := []byte(C.TimeUtc8Str())
 				hash := md5.Sum(strBytes)
 				sSession := hex.EncodeToString(hash[:])
+				C.PrintHHMMSS("A3")
 				reList[0].(map[string]interface{})["Session"] = sSession
 				fmt.Println(sSession)
 				C.InterFaceToMap(reList[0], reData.Origin())
-
-				var UserSid string
-				if sid, ok := reList[0].(map[string]interface{})["Sid"].(string); ok {
-					UserSid = sid
+				C.PrintHHMMSS("A4")
+				var UserSid int
+				if sid, ok := reData["Sid"].(float64); ok {
+					UserSid = int(sid)
 				} else {
 					// 处理无法转换为字符串的情况
 					fmt.Println("Failed to convert Sid to string")
 				}
-
-				LoginUser[UserSid] = sSession
+				C.PrintHHMMSS("A5")
+				LoginUser[strconv.Itoa(UserSid)] = sSession
 				bOk = true
 				sOkMsg = "登入成功"
 
@@ -95,6 +99,8 @@ func ImplementRecall(data CData) CData {
 			}
 
 		}
+
+		C.PrintHHMMSS("A6")
 
 		//
 	case iAction == C.SET_VALUE:
@@ -242,14 +248,14 @@ func ImplementRecall(data CData) CData {
 			buff := []byte(value.(string))
 			//fmt.Printf("buffLen: %d \n", len(buff))
 
-			var tmp CData
+			var tmp NETWORK.CData
 
 			if err := tmp.DecodeJSON(buff); err != nil {
 				continue
 			}
 
-			tmp.State = ACT_LOCAL
-			tmpRe := ImplementRecall(tmp)
+			tmp.State = NETWORK.ACT_LOCAL
+			tmpRe := d.ImplementRecall(tmp)
 
 			if tmp2, err := tmpRe.EncodeJSON(); err == nil {
 				//fmt.Printf("%d encode ok ", api)
@@ -774,16 +780,8 @@ func ImplementRecall(data CData) CData {
 		}
 
 	case iAction == C.REPLACE_ORDER:
-		var order C.OrderData
-		C.MapToStruct(Data, &order)
-		if order.Step == "0" {
-			bOk, sError = orderStep0(&order)
-			sOkMsg = "報價成功"
-		}
 
-
-		bOk,_,_ = CSQL.InsertTb(C.SQL_TABLE.OrderData(),C.StructToMap(order),&sError,true)
-		sOkMsg = "訂單送出"
+		bOk, sOkMsg, sError = DoOrder(data, &reData, &reList)
 
 	default:
 		// 未知操作，可以进行相应的处理
@@ -791,9 +789,9 @@ func ImplementRecall(data CData) CData {
 
 	}
 
-	var re CData
+	var re NETWORK.CData
 	re.Action = data.Action
-	re.State = ACT_RECALL
+	re.State = NETWORK.ACT_RECALL
 
 	re.Ok = bOk
 
@@ -813,188 +811,4 @@ func UploadPic(d map[string]interface{}) {
 	var error string
 	CSQL.InsertTb(C.SQL_TABLE.PicData(), d, &error, true)
 
-}
-
-func UpdateQueryCount(Data C.VariantMap) {
-	tmpMap := make(map[string]interface{})
-	var tmpList = []interface{}{}
-	var sError string
-	tmpMap["GameItemSid"] = Data["GameItemSid"]
-
-	itemCount := C.DataItemCount{}
-	C.MapToStruct(Data, &itemCount)
-
-	dataQuery := C.DataQueryCount{
-		GameSid:      itemCount.GameSid,
-		GameItemSid:  itemCount.GameItemSid,
-		Name:         itemCount.Name,
-		TotalCount:   itemCount.TotalCount,
-		TotalSell:    itemCount.TotalSell,
-		CurrentCount: itemCount.TotalCount - itemCount.TotalSell,
-	}
-
-	tmpOk := CSQL.QueryTb(C.SQL_TABLE.QueryCount(), tmpMap, &tmpList, &sError)
-	if tmpOk {
-
-		if len(tmpList) > 0 {
-
-			CSQL.UpdateTb(C.SQL_TABLE.QueryCount(), tmpMap, C.StructToMap(dataQuery), &sError)
-		} else {
-
-			CSQL.InsertTb(C.SQL_TABLE.QueryCount(), C.StructToMap(dataQuery), &sError, true)
-		}
-
-	}
-}
-
-func updateItemPrice(sGameSid string, gameRate string) {
-
-	fRate, _ := strconv.ParseFloat(gameRate, 64)
-
-	in := make(map[string]interface{})
-	in["GameSid"] = sGameSid
-
-	listOut := []interface{}{}
-	var sError string
-	CSQL.QueryTb(C.SQL_TABLE.GameItem(), in, &listOut, &sError)
-
-	for _, v := range listOut {
-		var item C.DataGameItem
-		C.InterfaceToStruct(v, &item)
-
-		f, err := strconv.ParseFloat(item.Bonus, 64)
-		if err != nil {
-			fmt.Println("Error parsing string:", err)
-			continue
-		} else {
-			rounded := math.Ceil(f * fRate)
-			s := strconv.FormatFloat(rounded, 'f', -1, 64)
-			item.NTD = s
-			//do something
-		}
-
-	}
-
-}
-
-func getCustomer(sSid string, data *C.CustomerData) bool {
-	in := make(map[string]interface{})
-	var listOut []interface{}
-	in["Sid"] = sSid
-	var sError string
-	bOk := CSQL.QueryTb(C.SQL_TABLE.CustomerData(), in, &listOut, &sError)
-	if !bOk || len(listOut) < 1 {
-		return false
-	}
-
-	C.InterfaceToStruct(listOut[0], data)
-	return true
-}
-
-func checkItemCount(orderData *C.OrderData, listLast []C.DataItemCount, sErrorGameItemSid []string) bool {
-
-	if orderData == nil {
-		fmt.Println("order data is nil")
-		return false
-	}
-
-	listItem := orderData.GetList("Item")
-
-	for _, item := range listItem {
-		parts := strings.Split(item, ",,")
-		gameItemSid := parts[0]
-		iCount, _ := strconv.ParseInt(parts[1], 10, 64)
-
-		in := make(map[string]interface{})
-		var out []interface{}
-		in["GameItemSid"] = gameItemSid
-		in["DESC"] = "Sid"
-		in["LIMIT"] = "1"
-		var sError string
-		CSQL.QueryTb(C.SQL_TABLE.GameItemCount(), in, &out, &sError)
-
-		itemCount := C.DataItemCount{
-			GameItemSid: gameItemSid,
-			ChangeValue: 0,
-			TotalCount:  0,
-			TotalSell:   0,
-		}
-
-		if len(out) > 0 {
-			err := C.InterfaceToStruct(out[0], &itemCount)
-			if err != nil {
-				sError = err.Error()
-				fmt.Printf("err : %s \n", err.Error())
-				return false
-			}
-		}
-
-		listLast = append(listLast, itemCount)
-		iNowCount := itemCount.TotalCount - itemCount.TotalSell
-		if iCount > iNowCount {
-			sErrorGameItemSid = append(sErrorGameItemSid, gameItemSid)
-			return false
-		}
-	}
-
-	return true
-}
-
-func orderStep0(order *C.OrderData) (bool, string) {
-	var cus C.CustomerData
-
-	if !getCustomer(order.CustomerSid, &cus) {
-		return false, "報價失敗，查詢客戶資料錯誤。"
-	}
-
-	var listLast []C.DataItemCount
-	var listSt []string
-	if !checkItemCount(order, listLast, listSt) {
-		return false, "報價失敗, 商品庫存數量不足。"
-	}
-
-	order.Currency = cus.Currency
-	order.CustomerName = cus.Name
-
-	in := map[string]interface{}{
-		"Sid": order.GameSid,
-	}
-	var tmpOut []interface{}
-	var sError string
-
-	if !CSQL.QueryTb(C.SQL_TABLE.GameList(), in, &tmpOut, &sError) {
-		return false, sError
-	}
-
-	if len(tmpOut) > 0 {
-
-		var tmpMap = make(map[string]interface{})
-		C.InterFaceToMap(tmpOut[0], &tmpMap)
-
-		order.GameRate = tmpMap["GameRate"].(string)
-	} else {
-		return false, "報價失敗，查詢遊戲資料錯誤"
-	}
-	listMoney := order.GetList("Money")
-	if strings.ToUpper(order.Currency) == "NTD" {
-		//	order.Money[0] = order.Cost
-		listMoney[0] = "NTD"
-	}
-
-	cost, err := strconv.ParseFloat(order.Cost, 64) // 假设这个转换是安全的
-	if err == nil && cost == 0 {
-		//	order.Money[0] = "0"
-		listMoney[0] = "0"
-	}
-
-	order.SetList("Money", listMoney)
-
-	if len(order.StepTime) > 0 {
-
-		list := order.GetList("StepTime")
-		list[0]=time.Now().UTC().Add(time.Minute * 8).Format("20060102150405")
-		order.SetList("StepTime",list) 
-	}
-
-	return true, ""
 }

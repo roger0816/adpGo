@@ -35,11 +35,11 @@ func OpenDb(ip, port, dbName, username, password string) error {
 		return err
 	}
 
-	// err = m_db.Ping()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	return err
-	// }
+	err = m_db.Ping()
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
 	m_db.SetMaxOpenConns(200)
 	m_db.SetMaxIdleConns(100)
 	fmt.Println("Connected to MySQL database!")
