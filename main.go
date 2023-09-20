@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	Adp "github.com/roger0816/adpGo/Adp"
 	CSQL "github.com/roger0816/adpGo/CSql"
@@ -11,9 +12,20 @@ import (
 
 func main() {
 
-	//args := os.Args[1:] // [1:] 可以跳過程序名稱
+	args := os.Args[1:] // [1:] 可以跳過程序名稱
 
-	err := CSQL.OpenDb("172.104.112.34", "3306", "adp", "roger", "Aa111111")
+	listTen := "6005"
+	dbIp := "172.104.112.34"
+
+	if len(args) > 2 {
+		dbIp = args[2]
+	}
+
+	if len(args) > 1 {
+		listTen = args[1]
+	}
+
+	err := CSQL.OpenDb(dbIp, "3306", "adp", "roger", "Aa111111")
 
 	if err != nil {
 		fmt.Println("open db false")
@@ -21,18 +33,26 @@ func main() {
 	}
 	defer CSQL.CloseDb()
 
-	runServer()
+	runServer(listTen)
 
 	select {}
 
 }
 
-func runServer() {
-	go NETWORK.StartTcpServer("6005", Adp.AdpRecaller{})
-	fmt.Println("server start 6005")
-	go NETWORK.StartApiServer("6004")
+func runServer(sPort string) {
+	go NETWORK.StartTcpServer(sPort, Adp.AdpRecaller{})
+	fmt.Println("server start " + sPort)
+	iTmp := C.StringToInt64(sPort)
 
-	fmt.Println("server start 6004")
+	sSubPort := C.Int64ToString(iTmp + 10)
+
+	go NETWORK.StartTcpServer(sSubPort, Adp.AdpRecaller{})
+	fmt.Println("server start " + sSubPort)
+
+	sApiPort := C.Int64ToString(iTmp + 20)
+	go NETWORK.StartApiServer(sApiPort)
+	fmt.Println("api start " + sApiPort)
+
 }
 
 func test1() {
