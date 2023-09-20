@@ -13,16 +13,16 @@ import (
 func main() {
 
 	args := os.Args[1:] // [1:] 可以跳過程序名稱
-
+	fmt.Printf("args : %v", args)
 	listTen := "6005"
 	dbIp := "172.104.112.34"
 
-	if len(args) > 2 {
-		dbIp = args[2]
+	if len(args) > 1 {
+		dbIp = args[1]
 	}
 
-	if len(args) > 1 {
-		listTen = args[1]
+	if len(args) > 0 {
+		listTen = args[0]
 	}
 
 	err := CSQL.OpenDb(dbIp, "3306", "adp", "roger", "Aa111111")
