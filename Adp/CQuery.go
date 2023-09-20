@@ -637,7 +637,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	case iAction == C.ADD_BOUNS:
 		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.UserBonus(), Data, &sError, false)
-		sOkMsg = "新增成功"
+		sOkMsg = "修改完成"
 
 	case iAction == C.ADD_SCHEDULE:
 		tmpIn["Sid"] = Data["Sid"]
@@ -654,7 +654,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		sOkMsg = "新增成功"
 
 	case iAction == C.UPLOAD_PIC:
-		go UploadPic(Data)
+	//	go UploadPic(Data)
 		bOk = true
 
 	case iAction == C.ADD_DEBIT_CLASS:
@@ -675,8 +675,6 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 		var customer C.CustomerData
 		C.InterfaceToStruct(Data["CustomerData"], &customer)
-
-		fmt.Printf("AAA3 %v\n", customer)
 
 		var costData C.CustomerCost
 		C.InterfaceToStruct(Data["CostData"], &costData)
@@ -741,9 +739,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 		sOkMsg = "加值完成\n\n加值金額:" + fmt.Sprintf("%.2f", iChangeValue) + "\n加值後金額:" + fmt.Sprintf("%.2f", iNewTotal)
 
-	case iAction == C.PAY_ORDER:
-		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.DebitClass(), Data, &sError, false)
-		sOkMsg = "支付管道新增完成"
+
 
 	case iAction == C.LAST_ORDER_ID:
 
@@ -779,10 +775,11 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			}
 		}
 
-	case iAction == C.REPLACE_ORDER:
+	case iAction == C.REPLACE_ORDER , iAction == C.PAY_ORDER:
 
 		bOk, sOkMsg, sError = DoOrder(data, &reData, &reList)
 
+		
 	default:
 		// 未知操作，可以进行相应的处理
 		fmt.Printf("unknown action : %d \n", iAction)
@@ -810,5 +807,60 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 func UploadPic(d map[string]interface{}) {
 	var error string
 	CSQL.InsertTb(C.SQL_TABLE.PicData(), d, &error, true)
+
+}
+
+func GetGameItem(sSid string) (re C.DataGameItem) {
+
+	in := make(map[string]interface{})
+	in["Sid"] = sSid
+
+	listOut := []interface{}{}
+	var sError string
+	CSQL.QueryTb(C.SQL_TABLE.GameItem(), in, &listOut, &sError)
+
+	if len(listOut) > 0 {
+
+	
+		C.InterfaceToStruct(listOut[0], &re)
+
+	
+
+	}
+
+	return re
+}
+
+func GetUser(sSid string) (re C.UserData) {
+
+	in := make(map[string]interface{})
+	in["Sid"] = sSid
+
+	listOut := []interface{}{}
+	var sError string
+	CSQL.QueryTb(C.SQL_TABLE.UserData(), in, &listOut, &sError)
+
+	if len(listOut) > 0 {
+		C.InterfaceToStruct(listOut[0], &re)
+
+	}
+
+	return re
+
+}
+
+func GetCustomer(sSid string ) (re C.CustomerData) {
+	in := make(map[string]interface{})
+	in["Sid"] = sSid
+
+	listOut := []interface{}{}
+	var sError string
+	CSQL.QueryTb(C.SQL_TABLE.CustomerData(), in, &listOut, &sError)
+
+	if len(listOut) >0 {
+		C.InterfaceToStruct(listOut[0],&re)
+	}
+
+	return re
 
 }

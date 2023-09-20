@@ -603,7 +603,6 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 
 	if len(listOut) >0 {
 		interFaceToMap(listOut[0],&resultData)
-		fmt.Printf("DD4 : %v\n", resultData)
 	}
 
 
@@ -790,13 +789,13 @@ func LastOrderId(sDate string) (string, error) {
 
 	var id sql.NullString
 	if err := row.Scan(&id); err != nil {
-		return sId, err
+		return sId, nil
 	}
 
 	if id.Valid {
 		sId = id.String
 	}
-
+	fmt.Printf("AAAA :LastOrderId : %v \n",sId)
 	return sId, nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -108,6 +109,9 @@ func InterfaceToStruct(input interface{}, output interface{}) error {
 	missingFields := []string{} // 创建一个切片来记录不存在的字段
 
 	for k, v := range data {
+		if v == nil { // 过滤nil值
+			continue
+		}
 		field, exists := val.Type().FieldByName(k) // 检查字段是否存在
 		if !exists {
 			missingFields = append(missingFields, k) // 如果字段不存在，将其添加到切片中
@@ -122,6 +126,19 @@ func InterfaceToStruct(input interface{}, output interface{}) error {
 			}
 			data[k] = intValue
 		}
+
+		if field.Type.Kind() == reflect.String && reflect.TypeOf(v).Kind() == reflect.Int64 {
+			// Convert int64 to string for fields like GameSid
+			data[k] = strconv.FormatInt(v.(int64), 10)
+		} else if field.Type.Kind() == reflect.Bool && reflect.TypeOf(v).Kind() == reflect.Int64 {
+			// Convert non-zero int64 to true and zero to false for fields like Enable and EnableCost
+			if v.(int64) == 0 {
+				data[k] = false
+			} else {
+				data[k] = true
+			}
+		}
+
 	}
 
 	if len(missingFields) > 0 {
@@ -145,20 +162,67 @@ func MapToStructByName(data map[string]interface{}, target interface{}) {
 	}
 }
 
-func MapToStruct(data map[string]interface{}, outputStruct interface{}) error {
+func ConvertSid(data map[string]interface{}, outputStruct interface{}) error {
+	// 首先，检查data["Sid"]的类型
+	var sidInt64 int64
+	sid, exists := data["Sid"]
 
-	// 對於特定的鍵（例如Sid），進行預處理轉換
-	// if sidValue, ok := data["Sid"]; ok {
-	// 	switch sid := sidValue.(type) {
-	// 	case int, int64:
-	// 		data["Sid"] = fmt.Sprintf("%d", sid)
-	// 		// case float64:
-	// 		//     data["Sid"] = fmt.Sprintf("%.0f", sid)
+	if !exists {
+		return nil
+	}
+
+	switch sidValue := sid.(type) {
+	case string:
+		var err error
+		sidInt64, err = strconv.ParseInt(sidValue, 10, 64)
+		if err != nil {
+			return nil
+		}
+		data["Sid"] = sidInt64
+	case int:
+		sidInt64 = int64(sidValue)
+		data["Sid"] = sidInt64
+	case int64:
+		sidInt64 = sidValue
+	default:
+		return nil
+	}
+
+	// 然后，检查outputStruct中Sid字段的类型，并进行适当的转换
+	val := reflect.ValueOf(outputStruct).Elem()
+	sidField := val.FieldByName("Sid")
+
+	if sidField.IsValid() {
+		switch sidField.Kind() {
+		case reflect.String:
+			sidField.SetString(strconv.FormatInt(sidInt64, 10))
+		case reflect.Int, reflect.Int64:
+			sidField.SetInt(sidInt64)
+		default:
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func ConvertFloatToInt(data map[string]interface{}) {
+	// for key, value := range data {
+	// 	switch v := value.(type) {
 	// 	case float64:
-	// 		data["Sid"] = fmt.Sprintf("%d", int64(v)) // 轉為 int64，移除小數部分
+	// 		// 確保轉換不會丟失資料
+	// 		data[key] = int64(v)
 	// 	}
 	// }
+}
 
+func MapToStruct(data map[string]interface{}, outputStruct interface{}) error {
+
+	//ConvertFloatToInt(data)
+
+	ConvertSid(data, outputStruct)
+
+	// fmt.Println("AAAAAAA1");
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -197,6 +261,46 @@ func StructToMap(item interface{}) map[string]interface{} {
 		result[key] = val.Field(i).Interface()
 	}
 	return result
+}
+
+func StringToInt64(str string) int64 {
+	val, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		// 這裡只是一個例子，你可能想要有不同的錯誤處理方式。
+		fmt.Println("Error parsing string:", err)
+		return 0
+	}
+	return val
+}
+
+func Int64ToString(val int64) string {
+	return strconv.FormatInt(val, 10)
+}
+func StringToFloat64(str string) float64 {
+	value, err := strconv.ParseFloat(str, 64) // 第二個參數64表示轉換成float64
+	if err != nil {
+		fmt.Println("轉換錯誤:", err)
+	}
+	return value
+}
+
+func Float64ToString(f float64) string {
+	return strconv.FormatFloat(f, 'f', 2, 64)  // 'f'表示普通的浮點格式。-1表示將所有小數位都列出。64表示f是float64。
+}
+
+func StringToList(str string, separator string, length ...int) []string {
+	list := strings.Split(str, separator)
+	if len(length) > 0 {
+		for i := len(list); i < length[0]; i++ {
+			list = append(list, "")
+		}
+	}
+
+	return list
+}
+
+func ListToString(list []string, separator string) string {
+	return strings.Join(list, separator)
 }
 
 func ToListMap(listData []interface{}) ([]map[string]interface{}, error) {
@@ -258,4 +362,50 @@ func PrintHHMMSS(st string) string {
 	re := time.Now().UTC().Add(time.Hour * 8).Format("15:04:05.999")
 	fmt.Printf("[%s] %s \n", re, st)
 	return re
+}
+
+func PrintMap(sTag string, d map[string]interface{}) {
+
+	for k, v := range d {
+		fmt.Printf(sTag+" Key: %s, Value: %v, Type: %T\n", k, v, v)
+	}
+
+}
+
+func PrintStruct(prefix string, s interface{}) {
+	val := reflect.ValueOf(s)
+	if val.Kind() != reflect.Struct {
+		fmt.Println("The provided item is not a struct!")
+		return
+	}
+
+	typ := val.Type()
+	for i := 0; i < val.NumField(); i++ {
+		field := typ.Field(i)
+		value := val.Field(i)
+		fmt.Printf("%s Field Name: %s, Field Value: %v, Type: %T\n", prefix, field.Name, value.Interface(), value.Interface())
+	}
+}
+
+func PrintInterface(prefix string, data interface{}) {
+	val := reflect.ValueOf(data)
+	typ := val.Type()
+
+	switch typ.Kind() {
+	case reflect.Map:
+		// Iterate over map keys and values
+		for _, key := range val.MapKeys() {
+			value := val.MapIndex(key)
+			fmt.Printf("%s Key: %v, Value: %v, Type: %T\n", prefix, key.Interface(), value.Interface(), value.Interface())
+		}
+	case reflect.Struct:
+		// Iterate over struct fields
+		for i := 0; i < val.NumField(); i++ {
+			field := typ.Field(i)
+			value := val.Field(i)
+			fmt.Printf("%s Field Name: %s, Field Value: %v, Type: %T\n", prefix, field.Name, value.Interface(), value.Interface())
+		}
+	default:
+		fmt.Printf("%s Value: %v, Type: %T\n", prefix, data, data)
+	}
 }
