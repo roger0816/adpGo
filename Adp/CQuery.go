@@ -233,7 +233,9 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		tmpIn["ASC"] = "Sort"
 
 		bOk = CSQL.QueryTb(C.SQL_TABLE.DebitClass(), tmpIn, &reList, &sError)
+	case iAction == C.QUERY_COUNT:
 
+		bOk = CSQL.QueryTb(C.SQL_TABLE.QueryCount(), Data, &reList, &sError)
 	case iAction == C.QUERY_MIX:
 
 		for key, value := range Data {
@@ -545,6 +547,24 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		fmt.Println(sOkMsg)
 
 	case iAction == C.ADD_ITEM_COUNT:
+
+		tmp := make(map[string]interface{})
+		tmp["GameItemSid"] = Data["GameItemSid"]
+		tmp["DESC"]="Sid"
+		tmp["Limit"]="1"
+		var listOut []interface{}
+		var tmpError string
+		tmpOk :=CSQL.QueryTb(C.SQL_TABLE.GameItemCount(),tmp,&listOut,&tmpError)
+
+		if tmpOk && len(listOut)>0 {
+			var d C.DataItemCount
+			C.InterfaceToStruct(listOut[0],&d)
+			Data["TotalSell"]=d.TotalSell
+			//該接口只用來 調整庫存
+			//防止同步時間差導致賣出數量出錯
+		}
+
+
 		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GameItemCount(), Data, &sError, false)
 		sOkMsg = "新增成功"
 		if bOk {
@@ -654,7 +674,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		sOkMsg = "新增成功"
 
 	case iAction == C.UPLOAD_PIC:
-	//	go UploadPic(Data)
+		go UploadPic(Data)
 		bOk = true
 
 	case iAction == C.ADD_DEBIT_CLASS:
@@ -739,8 +759,6 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 		sOkMsg = "加值完成\n\n加值金額:" + fmt.Sprintf("%.2f", iChangeValue) + "\n加值後金額:" + fmt.Sprintf("%.2f", iNewTotal)
 
-
-
 	case iAction == C.LAST_ORDER_ID:
 
 		sDate, ok := Data["OrderDate"].(string)
@@ -775,11 +793,10 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			}
 		}
 
-	case iAction == C.REPLACE_ORDER , iAction == C.PAY_ORDER:
+	case iAction == C.REPLACE_ORDER, iAction == C.PAY_ORDER:
 
 		bOk, sOkMsg, sError = DoOrder(data, &reData, &reList)
 
-		
 	default:
 		// 未知操作，可以进行相应的处理
 		fmt.Printf("unknown action : %d \n", iAction)
@@ -821,10 +838,7 @@ func GetGameItem(sSid string) (re C.DataGameItem) {
 
 	if len(listOut) > 0 {
 
-	
 		C.InterfaceToStruct(listOut[0], &re)
-
-	
 
 	}
 
@@ -849,7 +863,7 @@ func GetUser(sSid string) (re C.UserData) {
 
 }
 
-func GetCustomer(sSid string ) (re C.CustomerData) {
+func GetCustomer(sSid string) (re C.CustomerData) {
 	in := make(map[string]interface{})
 	in["Sid"] = sSid
 
@@ -857,8 +871,8 @@ func GetCustomer(sSid string ) (re C.CustomerData) {
 	var sError string
 	CSQL.QueryTb(C.SQL_TABLE.CustomerData(), in, &listOut, &sError)
 
-	if len(listOut) >0 {
-		C.InterfaceToStruct(listOut[0],&re)
+	if len(listOut) > 0 {
+		C.InterfaceToStruct(listOut[0], &re)
 	}
 
 	return re

@@ -36,7 +36,7 @@ func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{})
 	C.MapToStruct(Data, &order)
 
 	if order.Step == "0" {
-		C.PrintInterface("BBBB: a2 : ", order)
+
 		bOk, sError = orderStep0(&order)
 		sOkMsg = "報價成功"
 	} else {
@@ -72,7 +72,8 @@ func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{})
 			bOk, sError = orderStep4(current, &order)
 		} else if order.Step == "5" {
 			bOk = true
-
+		} else if order.Step == "-1" {
+			bOk, sError = orderCancel(current, &order)
 		}
 
 	}
@@ -289,6 +290,16 @@ func orderStep0(order *C.OrderData) (bool, string) {
 	return true, ""
 }
 
+func orderCancel(current C.OrderData, order *C.OrderData) (bool, string) {
+	fmt.Println("CCCCC : order cancal")
+	var sError string
+	if current.Step != "0" {
+		changeItemCount(current, true, &sError)
+	}
+
+	return true, ""
+}
+
 func orderStep1(current C.OrderData, order *C.OrderData) (bool, string) {
 	bOnlyChangeOwner := false
 	isBackSayCost := false
@@ -423,17 +434,16 @@ func orderStep4(current C.OrderData, order *C.OrderData) (bool, string) {
 }
 
 func changeItemCount(orderData C.OrderData, bIsAdd bool, sError *string) bool {
-
+	fmt.Println("changeItemCount")
 	*sError = ""
 	var listLast []C.DataItemCount
 	var listSt []string
-	if !bIsAdd {
-		var bOk bool
-		listLast, bOk = checkItemCount(&orderData, listSt)
-		if !bOk {
-			*sError = "商品庫存數量不足。"
-			return false
-		}
+	var bOk bool
+	listLast, bOk = checkItemCount(&orderData, listSt)
+	if !bIsAdd && !bOk {
+		*sError = "商品庫存數量不足。"
+		fmt.Println("商品庫存數量不足")
+		return false
 
 	}
 
