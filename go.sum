@@ -1,0 +1,6 @@
+github.com/go-sql-driver/mysql v1.7.1 h1:lUIinVbN1DY0xBg0eMOzmmtGoHwWBbvnWubQUrtU8EI=
+github.com/go-sql-driver/mysql v1.7.1/go.mod h1:OXbVy3sEdcQ2Doequ6Z5BW6fXNQTmx+9S1MCJN5yJMI=
+github.com/roger0816/adpGo v0.0.0-20230920042925-b482d6616bc9 h1:RrtLT4F883lEnxA1p1thtVRVgCQ8eDu9B62XytbUjdk=
+github.com/roger0816/adpGo v0.0.0-20230920042925-b482d6616bc9/go.mod h1:NIIv4DMhXPIG3WQ3oX07u84KQpORX+zG4btGW5tmaNo=
+github.com/roger0816/adpGo v0.0.0-20230921011959-11adac8e80f2 h1:cCIMj5AX0C4yRfCQTf8AqlB7kvRsrtz869J88Nt8C5k=
+github.com/roger0816/adpGo v0.0.0-20230921011959-11adac8e80f2/go.mod h1:NIIv4DMhXPIG3WQ3oX07u84KQpORX+zG4btGW5tmaNo=
