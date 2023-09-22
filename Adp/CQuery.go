@@ -564,11 +564,24 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			//防止同步時間差導致賣出數量出錯
 		}
 
+		if value, ok := Data["GameSid"].(string); ok {
+			if len(value) < 1 {
+				
+				if GameItemSid, ok := Data["GameItemSid"].(string); ok {
+					var item C.DataGameItem = GetGameItem(GameItemSid)
+					Data["GameSid"]=item.GameSid
+					Data["Name"] = item.Name
+				}
+			}
+		}
 
+
+
+		fmt.Printf("aaaa %v \n",Data)
 		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GameItemCount(), Data, &sError, false)
 		sOkMsg = "新增成功"
 		if bOk {
-			go UpdateQueryCount(Data)
+			 UpdateQueryCount(Data)
 		}
 
 	case iAction == C.DEL_ITEM_COUNT:
