@@ -547,41 +547,48 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		fmt.Println(sOkMsg)
 
 	case iAction == C.ADD_ITEM_COUNT:
-
+		fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAx")
 		tmp := make(map[string]interface{})
 		tmp["GameItemSid"] = Data["GameItemSid"]
-		tmp["DESC"]="Sid"
-		tmp["Limit"]="1"
+		tmp["DESC"] = "Sid"
+		tmp["Limit"] = "1"
 		var listOut []interface{}
 		var tmpError string
-		tmpOk :=CSQL.QueryTb(C.SQL_TABLE.GameItemCount(),tmp,&listOut,&tmpError)
+		tmpOk := CSQL.QueryTb(C.SQL_TABLE.GameItemCount(), tmp, &listOut, &tmpError)
 
-		if tmpOk && len(listOut)>0 {
+		if tmpOk && len(listOut) > 0 {
 			var d C.DataItemCount
-			C.InterfaceToStruct(listOut[0],&d)
-			Data["TotalSell"]=d.TotalSell
+			C.InterfaceToStruct(listOut[0], &d)
+			Data["TotalSell"] = d.TotalSell
 			//該接口只用來 調整庫存
 			//防止同步時間差導致賣出數量出錯
 		}
 
-		if value, ok := Data["GameSid"].(string); ok {
-			if len(value) < 1 {
-				
-				if GameItemSid, ok := Data["GameItemSid"].(string); ok {
-					var item C.DataGameItem = GetGameItem(GameItemSid)
-					Data["GameSid"]=item.GameSid
-					Data["Name"] = item.Name
-				}
-			}
+		GameItemSid, _ := Data["GameItemSid"].(string)
+
+		value, exists := Data["GameSid"]
+		if !exists {
+			// GameSid 在 map tmp 中不存在
+			var item C.DataGameItem = GetGameItem(GameItemSid)
+			Data["GameSid"] = item.GameSid
+			Data["Name"] = item.Name
+			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA0")
+
+		} else if strValue, isString := value.(string); isString && len(strValue) < 1 {
+			// GameSid 存在，但其值的長度小於 1
+			var item C.DataGameItem = GetGameItem(GameItemSid)
+			Data["GameSid"] = item.GameSid
+			Data["Name"] = item.Name
+			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA1")
 		}
 
 
-
-		fmt.Printf("aaaa %v \n",Data)
+		fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA2")
+		fmt.Printf("aaaa %v \n", Data)
 		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GameItemCount(), Data, &sError, false)
 		sOkMsg = "新增成功"
 		if bOk {
-			 UpdateQueryCount(Data)
+			UpdateQueryCount(Data)
 		}
 
 	case iAction == C.DEL_ITEM_COUNT:
