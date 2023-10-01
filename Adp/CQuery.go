@@ -266,6 +266,9 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 		}
 
+	case iAction == C.QUERY_DAY_REPORT:
+	reList =  GetDayReport(Data)
+
 	//END QUERY--------------------------------
 
 	case iAction == C.ADD_USER:
@@ -547,7 +550,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		fmt.Println(sOkMsg)
 
 	case iAction == C.ADD_ITEM_COUNT:
-		fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAx")
+	
 		tmp := make(map[string]interface{})
 		tmp["GameItemSid"] = Data["GameItemSid"]
 		tmp["DESC"] = "Sid"
@@ -572,19 +575,16 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			var item C.DataGameItem = GetGameItem(GameItemSid)
 			Data["GameSid"] = item.GameSid
 			Data["Name"] = item.Name
-			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA0")
+			
 
 		} else if strValue, isString := value.(string); isString && len(strValue) < 1 {
 			// GameSid 存在，但其值的長度小於 1
 			var item C.DataGameItem = GetGameItem(GameItemSid)
 			Data["GameSid"] = item.GameSid
 			Data["Name"] = item.Name
-			fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA1")
+			
 		}
 
-
-		fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA2")
-		fmt.Printf("aaaa %v \n", Data)
 		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.GameItemCount(), Data, &sError, false)
 		sOkMsg = "新增成功"
 		if bOk {

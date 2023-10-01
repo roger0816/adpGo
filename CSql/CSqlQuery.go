@@ -245,14 +245,15 @@ func QueryCount(sTableName string, conditions map[string]interface{}, useMainDb 
 
 	}
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
+	
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&iRe)
 		if err != nil {
-			log.Fatal(err)
+		//	log.Fatal(err)
 		}
 	}
 
@@ -373,7 +374,7 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 
 	transaction, err := writeDb().Begin()
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
 		return false
 	}
 
@@ -439,7 +440,7 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 		query := baseCmd + sCmd + sSub
 		stmt, err := transaction.Prepare(query)
 		if err != nil {
-			log.Fatal(err)
+			//log.Fatal(err)
 			return false
 		}
 
@@ -456,7 +457,7 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 
 		_, execErr := stmt.Exec(args...)
 		if execErr != nil {
-			log.Fatal(execErr)
+			//log.Fatal(execErr)
 			transaction.Rollback()
 			return false
 		}
@@ -465,7 +466,7 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 
 	err = transaction.Commit()
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
 		return false
 	}
 
@@ -477,7 +478,7 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 func InsertTb(sTableName string, input map[string]interface{}, sError *string, bOrReplace bool) (bool, int64, map[string]interface{}) {
 	data := input
 
-	fmt.Printf("DD0 : %v\n", input)
+
 	sDateTime := CurrentTime()
 
 	if sTableName != "LastUpdateTime" {
@@ -533,7 +534,7 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 	query, err := writeDb().Prepare(sCmd)
 	if err != nil {
 		*sError = "Failed to query the inserted data: " + err.Error()
-		log.Fatal(err)
+		//log.Fatal(err)
 	}
 
 	args := make([]interface{}, len(listKey))
@@ -550,6 +551,8 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 		*sError = err.Error()
 		return false, 0, nil
 	}
+
+	defer query.Close()
 
 	// Retrieve the last inserted ID
 	lastInsertID, err := result.LastInsertId()
