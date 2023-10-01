@@ -2,12 +2,13 @@ package CSql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
-	"encoding/json"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -27,7 +28,7 @@ func writeDb() *sql.DB {
 }
 
 func OpenDb(ip, port, dbName, username, password string) error {
-
+	fmt.Println("db open 1002")
 	db, err := sql.Open("mysql", username+":"+password+"@tcp("+ip+":"+port+")/"+dbName)
 	m_db = db
 	if err != nil {
@@ -142,7 +143,7 @@ func BaseQuery(tableName string, conditions map[string]interface{}, listOut *[]i
 		sSub += sLimit
 	}
 
-//	fmt.Printf("sql query : %s \n", query+sSub)
+	//	fmt.Printf("sql query : %s \n", query+sSub)
 
 	var stmt *sql.Stmt
 	var err error
@@ -246,14 +247,14 @@ func QueryCount(sTableName string, conditions map[string]interface{}, useMainDb 
 	}
 	if err != nil {
 		//log.Fatal(err)
-	
+
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&iRe)
 		if err != nil {
-		//	log.Fatal(err)
+			//	log.Fatal(err)
 		}
 	}
 
@@ -478,7 +479,6 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 func InsertTb(sTableName string, input map[string]interface{}, sError *string, bOrReplace bool) (bool, int64, map[string]interface{}) {
 	data := input
 
-
 	sDateTime := CurrentTime()
 
 	if sTableName != "LastUpdateTime" {
@@ -586,28 +586,27 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 	resultData := make(map[string]interface{})
 
 	/*
-	for i, colName := range columns {
-		val := values[i]
-		resultData[colName] = val
-	}
-	fmt.Printf("DD1 : %v\n", resultData)
-	setLastUpdateTime(sTableName, sDateTime)
+		for i, colName := range columns {
+			val := values[i]
+			resultData[colName] = val
+		}
+		fmt.Printf("DD1 : %v\n", resultData)
+		setLastUpdateTime(sTableName, sDateTime)
 
-	for key, value := range resultData {
-		fmt.Printf("Key: %v, Value: %v, Type: %T\n", key, value, value)
-	}
+		for key, value := range resultData {
+			fmt.Printf("Key: %v, Value: %v, Type: %T\n", key, value, value)
+		}
 	*/
 	var tmp = make(map[string]interface{})
-	tmp["Sid"]=lastInsertID
+	tmp["Sid"] = lastInsertID
 
 	var listOut = []interface{}{}
 	var tmpErr string
-	QueryTb(sTableName,tmp,&listOut,&tmpErr)
+	QueryTb(sTableName, tmp, &listOut, &tmpErr)
 
-	if len(listOut) >0 {
-		interFaceToMap(listOut[0],&resultData)
+	if len(listOut) > 0 {
+		interFaceToMap(listOut[0], &resultData)
 	}
-
 
 	return true, lastInsertID, resultData
 }
@@ -764,20 +763,20 @@ func interFaceToMap(in interface{}, out *map[string]interface{}) {
 }
 
 func interpolateQuery(query string, args []interface{}) string {
-    for _, arg := range args {
-        switch v := arg.(type) {
-        case string:
-            query = strings.Replace(query, "?", "'"+v+"'", 1)
-        case int:
-            query = strings.Replace(query, "?", strconv.Itoa(v), 1)
-        case float64:
-            query = strings.Replace(query, "?", fmt.Sprintf("%f", v), 1)
-        // ... 其他数据类型，根据需要添加
-        default:
-            query = strings.Replace(query, "?", fmt.Sprintf("%v", v), 1)
-        }
-    }
-    return query
+	for _, arg := range args {
+		switch v := arg.(type) {
+		case string:
+			query = strings.Replace(query, "?", "'"+v+"'", 1)
+		case int:
+			query = strings.Replace(query, "?", strconv.Itoa(v), 1)
+		case float64:
+			query = strings.Replace(query, "?", fmt.Sprintf("%f", v), 1)
+		// ... 其他数据类型，根据需要添加
+		default:
+			query = strings.Replace(query, "?", fmt.Sprintf("%v", v), 1)
+		}
+	}
+	return query
 }
 
 func LastOrderId(sDate string) (string, error) {
@@ -798,7 +797,7 @@ func LastOrderId(sDate string) (string, error) {
 	if id.Valid {
 		sId = id.String
 	}
-	fmt.Printf("AAAA :LastOrderId : %v \n",sId)
+	fmt.Printf("AAAA :LastOrderId : %v \n", sId)
 	return sId, nil
 }
 
