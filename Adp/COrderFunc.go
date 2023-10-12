@@ -78,8 +78,11 @@ func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{})
 
 	}
 
-	bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.OrderData(), C.StructToMap(order), &sError, true)
-	sOkMsg = "訂單送出"
+	if bOk {
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.OrderData(), C.StructToMap(order), &sError, true)
+		sOkMsg = "訂單送出"
+	}
+
 
 	return
 }

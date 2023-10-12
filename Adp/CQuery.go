@@ -11,6 +11,8 @@ import (
 	NETWORK "github.com/roger0816/adpGo/RpkNetwork"
 )
 
+//show global status like 'com_stmt%';
+
 var LoginUser = make(map[string]interface{})
 
 type AdpRecaller struct{}
@@ -680,7 +682,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	case iAction == C.ADD_SCHEDULE:
 		tmpIn["Sid"] = Data["Sid"]
-		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.Schedule(), Data, &sError, false)
+		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.Schedule(), Data, &sError, true)
 		sOkMsg = "新增成功"
 
 	case iAction == C.ADD_EXCHANGE:

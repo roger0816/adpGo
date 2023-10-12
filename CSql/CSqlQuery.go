@@ -28,7 +28,7 @@ func writeDb() *sql.DB {
 }
 
 func OpenDb(ip, port, dbName, username, password string) error {
-	fmt.Println("db open 1002")
+	fmt.Println("db open 1003")
 	db, err := sql.Open("mysql", username+":"+password+"@tcp("+ip+":"+port+")/"+dbName)
 	m_db = db
 	if err != nil {

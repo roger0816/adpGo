@@ -294,6 +294,7 @@ type DataGameItem struct {
 	Name            string `json:"Name" structs:"Name"`
 	UpdateTime      string `json:"UpdateTime" structs:"UpdateTime"`
 	GameSid         string `json:"GameSid" structs:"GameSid"`
+	ForApi          int    `json:"ForApi" structs:"ForApi"`
 	Sort            int    `json:"Sort" structs:"Sort"`
 	Enable          bool   `json:"Enable" structs:"Enable"`
 	OrderNTD        string `json:"OrderNTD" structs:"OrderNTD"`
