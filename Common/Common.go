@@ -285,7 +285,7 @@ func StringToFloat64(str string) float64 {
 }
 
 func Float64ToString(f float64) string {
-	return strconv.FormatFloat(f, 'f', 2, 64)  // 'f'表示普通的浮點格式。-1表示將所有小數位都列出。64表示f是float64。
+	return strconv.FormatFloat(f, 'f', 2, 64) // 'f'表示普通的浮點格式。-1表示將所有小數位都列出。64表示f是float64。
 }
 
 func StringToList(str string, separator string, length ...int) []string {
@@ -354,7 +354,19 @@ func (v VariantMap) ToList(key string) []map[string]interface{} {
 }
 
 func TimeUtc8Str() string {
-	re := time.Now().UTC().Add(time.Hour * 8).Format("20060102150405")
+	//re := time.Now().UTC().Add(time.Hour * 8).Format("20060102150405")
+
+	location, err := time.LoadLocation("Asia/Taipei")
+	if err != nil {
+		return ""
+	}
+
+	// 獲取當前台灣時區的時間
+	taiwanTime := time.Now().In(location)
+
+	// 格式化時間為字符串
+	re := taiwanTime.Format("20060102150405")
+
 	return re
 }
 

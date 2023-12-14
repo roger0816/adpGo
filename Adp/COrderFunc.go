@@ -5,7 +5,6 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"time"
 
 	CSQL "github.com/roger0816/adpGo/CSql"
 	C "github.com/roger0816/adpGo/Common"
@@ -82,7 +81,6 @@ func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{})
 		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.OrderData(), C.StructToMap(order), &sError, true)
 		sOkMsg = "訂單送出"
 	}
-
 
 	return
 }
@@ -286,7 +284,9 @@ func orderStep0(order *C.OrderData) (bool, string) {
 	if len(order.StepTime) > 0 {
 
 		list := order.GetList("StepTime")
-		list[0] = time.Now().UTC().Add(time.Minute * 8).Format("20060102150405")
+	
+		list[0] = C.TimeUtc8Str()
+
 		order.SetList("StepTime", list)
 	}
 
