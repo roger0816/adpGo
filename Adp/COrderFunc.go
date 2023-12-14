@@ -11,6 +11,10 @@ import (
 	NETWORK "github.com/roger0816/adpGo/RpkNetwork"
 )
 
+func OrderFuncIni() {
+	println("orderFunc 1019")
+}
+
 func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{}) (bOk bool, sOkMsg string, sError string) {
 
 	var tmpIn C.VariantMap = make(map[string]interface{})
@@ -373,6 +377,17 @@ func orderStep2(current C.OrderData, order *C.OrderData) (bool, string) {
 	if current.Step == "3" {
 
 		return false, GetUser(string(listUser[3])).Name + " 已儲值完成"
+	}
+
+	if current.Step == "4" {
+
+		var sName string
+
+		if len(listUser) > 4 {
+			sName = GetUser(string(listUser[4])).Name
+		}
+
+		return false, sName + " 已回報完成"
 	}
 
 	return true, ""
