@@ -12,7 +12,7 @@ import (
 )
 
 func OrderFuncIni() {
-	println("orderFunc 1019")
+	println("orderFunc 1226")
 }
 
 func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{}) (bOk bool, sOkMsg string, sError string) {
@@ -82,7 +82,13 @@ func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{})
 	}
 
 	if bOk {
-		bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.OrderData(), C.StructToMap(order), &sError, true)
+		//TODO
+		if order.Step == "1" {
+			bOk, _, _ = CSQL.LockInsertTb(C.SQL_TABLE.OrderData(), C.StructToMap(order), &sError, true)
+		} else {
+			bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.OrderData(), C.StructToMap(order), &sError, true)
+		}
+		//bOk, _, _ = CSQL.InsertTb(C.SQL_TABLE.OrderData(), C.StructToMap(order), &sError, true)
 		sOkMsg = "訂單送出"
 	}
 
@@ -288,7 +294,7 @@ func orderStep0(order *C.OrderData) (bool, string) {
 	if len(order.StepTime) > 0 {
 
 		list := order.GetList("StepTime")
-	
+
 		list[0] = C.TimeUtc8Str()
 
 		order.SetList("StepTime", list)
@@ -298,7 +304,7 @@ func orderStep0(order *C.OrderData) (bool, string) {
 }
 
 func orderCancel(current C.OrderData, order *C.OrderData) (bool, string) {
-	fmt.Println("CCCCC : order cancal")
+
 	var sError string
 	if current.Step != "0" {
 		changeItemCount(current, true, &sError)

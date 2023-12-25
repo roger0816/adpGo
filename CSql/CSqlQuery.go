@@ -476,6 +476,139 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 	return true
 }
 
+func LockInsertTb(sTableName string, input map[string]interface{}, sError *string, bOrReplace bool) (bool, int64, map[string]interface{}) {
+	data := input
+
+	sDateTime := CurrentTime()
+
+	if sTableName != "LastUpdateTime" {
+		data["UpdateTime"] = sDateTime // 使用 "updateTime"，確保大小寫正確
+	}
+
+	db := writeDb()
+
+	// 开始一个新的事务
+	tx, err := db.Begin()
+	if err != nil {
+		*sError = "Failed to start transaction: " + err.Error()
+		return false, 0, nil
+	}
+
+	_, err = tx.Exec("LOCK TABLES " + sTableName + " WRITE")
+	if err != nil {
+		*sError = "Failed to lock table: " + err.Error()
+		tx.Rollback()
+		return false, 0, nil
+	}
+
+	// ...[构建sCmd, 准备args]...
+
+	var listKey []string
+	for k, v := range data {
+		// 如果v是string類型且不是空字符串，或者v不是string且不是nil
+		if str, ok := v.(string); ok {
+			if str != "" {
+				listKey = append(listKey, k)
+			}
+		} else if v != nil {
+			listKey = append(listKey, k)
+		}
+	}
+
+	operation := "INSERT"
+	if bOrReplace {
+		operation = "REPLACE"
+	}
+
+	var tmpKey, tmpValue string
+	for i, sKey := range listKey {
+		if i != 0 {
+			tmpKey += ","
+			tmpValue += ","
+		}
+		tmpKey += sKey
+		tmpValue += "?"
+	}
+
+	sCmd := fmt.Sprintf("%s INTO %s (%s) VALUES (%s);", operation, sTableName, tmpKey, tmpValue)
+
+	fmt.Println("cmd:", sCmd)
+
+	// 使用事务执行插入操作
+
+	args := make([]interface{}, len(listKey))
+	for i, sKey := range listKey {
+		args[i] = data[sKey]
+		if sTableName != "PicData" {
+			fmt.Println(sKey, ":", data[sKey])
+		}
+	}
+	// Capture the result after execution
+	fmt.Printf("sql insert : %s \n", interpolateQuery(sCmd, args))
+	result, err := tx.Exec(sCmd, args...)
+	if err != nil {
+		*sError = err.Error()
+		return false, 0, nil
+	}
+
+	_, err = tx.Exec("UNLOCK TABLES;")
+	if err != nil {
+		*sError = "Failed to lock table: " + err.Error()
+		tx.Rollback()
+		return false, 0, nil
+	}
+
+	// 提交事务
+	if err := tx.Commit(); err != nil {
+		*sError = "Failed to commit transaction: " + err.Error()
+		return false, 0, nil
+	}
+
+	// Retrieve the last inserted ID
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		*sError = "Failed to retrieve the last insert ID: " + err.Error()
+		return false, 0, nil
+	}
+
+	// Query the inserted data using a new Query and scan into the map
+	rows, err := writeDb().Query("SELECT * FROM "+sTableName+" WHERE Sid=?", lastInsertID)
+	if err != nil {
+		*sError = "Failed to query the inserted data: " + err.Error()
+		return true, lastInsertID, nil
+	}
+	defer rows.Close()
+
+	columns, _ := rows.Columns()
+	values := make([]interface{}, len(columns))
+	pointers := make([]interface{}, len(columns))
+	for i := range values {
+		pointers[i] = &values[i]
+	}
+	if rows.Next() {
+		err := rows.Scan(pointers...)
+		if err != nil {
+			*sError = "Failed to scan the inserted data: " + err.Error()
+			return true, lastInsertID, nil
+		}
+	}
+
+	resultData := make(map[string]interface{})
+
+	var tmp = make(map[string]interface{})
+	tmp["Sid"] = lastInsertID
+
+	var listOut = []interface{}{}
+	var tmpErr string
+	QueryTb(sTableName, tmp, &listOut, &tmpErr)
+
+	if len(listOut) > 0 {
+		interFaceToMap(listOut[0], &resultData)
+	}
+
+	return true, lastInsertID, resultData
+}
+
 func InsertTb(sTableName string, input map[string]interface{}, sError *string, bOrReplace bool) (bool, int64, map[string]interface{}) {
 	data := input
 
@@ -495,22 +628,6 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 			listKey = append(listKey, k)
 		}
 	}
-
-	// if val, ok := data["Sid"]; ok {
-	// 	switch v := val.(type) {
-	// 	case string:
-	// 		if v == "" {
-	// 			delete(data, "Sid")
-	// 		}
-	// 	case int:
-	// 		if v <= 0 {
-	// 			delete(data, "Sid")
-	// 		}
-	// 		// No action required for int values
-	// 	default:
-	// 		log.Fatalf("Sid has unexpected type: %T", v)
-	// 	}
-	// }
 
 	operation := "INSERT"
 	if bOrReplace {
@@ -585,18 +702,6 @@ func InsertTb(sTableName string, input map[string]interface{}, sError *string, b
 
 	resultData := make(map[string]interface{})
 
-	/*
-		for i, colName := range columns {
-			val := values[i]
-			resultData[colName] = val
-		}
-		fmt.Printf("DD1 : %v\n", resultData)
-		setLastUpdateTime(sTableName, sDateTime)
-
-		for key, value := range resultData {
-			fmt.Printf("Key: %v, Value: %v, Type: %T\n", key, value, value)
-		}
-	*/
 	var tmp = make(map[string]interface{})
 	tmp["Sid"] = lastInsertID
 
