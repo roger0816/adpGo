@@ -12,7 +12,7 @@ import (
 )
 
 func OrderFuncIni() {
-	println("orderFunc 1226")
+	println("orderFunc 1227")
 }
 
 func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{}) (bOk bool, sOkMsg string, sError string) {
@@ -44,6 +44,8 @@ func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{})
 		sOkMsg = "報價成功"
 	} else {
 		if order.Owner == "未分配" {
+
+			bOk = true // if cancal
 			current = order
 		} else {
 			tmpIn["Sid"] = C.Int64ToString(int64(order.Sid))
@@ -306,7 +308,9 @@ func orderStep0(order *C.OrderData) (bool, string) {
 func orderCancel(current C.OrderData, order *C.OrderData) (bool, string) {
 
 	var sError string
+	fmt.Println("AAAAAA3")
 	if current.Step != "0" {
+		fmt.Println("AAAAAA3aa")
 		changeItemCount(current, true, &sError)
 	}
 
