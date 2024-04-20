@@ -19,12 +19,11 @@ type Recaller interface {
 type DefaultRecaller struct{}
 
 func (d DefaultRecaller) ImplementRecall(data CData) CData {
-    // 你的默認操作
-    return data // 返回修改後的data或原始data
+	// 你的默認操作
+	return data // 返回修改後的data或原始data
 }
 
-
-func handleConnection(conn net.Conn,recaller Recaller) {
+func handleConnection(conn net.Conn, recaller Recaller) {
 	defer conn.Close()
 
 	var buffer bytes.Buffer
@@ -130,7 +129,7 @@ func StartTcpServer(port string, recaller Recaller) {
 		if recaller == nil {
 			recaller = DefaultRecaller{}
 		}
-		go handleConnection(conn,recaller)
+		go handleConnection(conn, recaller)
 	}
 }
 

@@ -814,6 +814,27 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			}
 		}
 
+	case iAction == C.UPDATE_DATA:
+		sDate, ok1 := Data["OrderDate"].(string)
+
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >="] = sDate
+			reOrder := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.OrderData(), conditions, &reOrder, &sError)
+			reData["OrderData"] = reOrder
+		}
+
+		sDate, ok1 = Data["CustomerData"].(string)
+
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >="] = sDate
+			reCus := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerData(), conditions, &reCus, &sError)
+			reData["CustomerData"] = reCus
+		}
+
 	case iAction == C.REPLACE_ORDER, iAction == C.PAY_ORDER:
 
 		bOk, sOkMsg, sError = DoOrder(data, &reData, &reList)
