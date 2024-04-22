@@ -370,6 +370,27 @@ func TimeUtc8Str() string {
 	return re
 }
 
+func DateUtc8Str(addDays int) string {
+	// 加載亞洲/台北時區
+	location, err := time.LoadLocation("Asia/Taipei")
+	if err != nil {
+		return ""
+	}
+
+	// 獲取當前台灣時區的時間
+	taiwanTime := time.Now().In(location)
+
+	// 添加指定天數
+	if addDays != 0 {
+		taiwanTime = taiwanTime.Add(time.Hour * 24 * time.Duration(addDays))
+	}
+
+	// 格式化時間為字符串
+	re := taiwanTime.Format("20060102")
+
+	return re
+}
+
 func PrintHHMMSS(st string) string {
 	re := time.Now().UTC().Add(time.Hour * 8).Format("15:04:05.999")
 	fmt.Printf("[%s] %s \n", re, st)
