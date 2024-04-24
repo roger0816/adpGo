@@ -815,10 +815,11 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		}
 
 	case iAction == C.UPDATE_DATA:
-		sDate, ok1 := Data["OrderDate"].(string)
 
+		sDate, ok1 := Data["OrderData"].(string)
 		if ok1 {
 			conditions := make(map[string]interface{})
+
 			conditions["UpdateTime >"] = sDate
 			conditions["OrderDate >="] = C.DateUtc8Str(-1)
 			reOrder := []interface{}{}
@@ -827,13 +828,80 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		}
 
 		sDate, ok1 = Data["CustomerData"].(string)
-
 		if ok1 {
 			conditions := make(map[string]interface{})
+			conditions["ASC"] = "UpdateTime"
+			conditions["LIMIT"] = "5000"
 			conditions["UpdateTime >"] = sDate
 			reCus := []interface{}{}
 			bOk = CSQL.QueryTb(C.SQL_TABLE.CustomerData(), conditions, &reCus, &sError)
+
+			condi := make(map[string]interface{})
+			condi["UpdateTime ="] = sDate
+			condi["ASC"] = "UpdateTime"
+			reTmp := []interface{}{}
+			CSQL.QueryTb(C.SQL_TABLE.CustomerData(), condi, &reTmp, &sError)
+			if len(reTmp) > 1 {
+				reTmp = reTmp[1:]               // 移除 reTmp 的第一個元素
+				reCus = append(reCus, reTmp...) // 串連 reTmp 到 reCus
+			}
+
 			reData["CustomerData"] = reCus
+		}
+
+		sDate, ok1 = Data["UserData"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.UserData(), conditions, &re, &sError)
+			reData["UserData"] = re
+		}
+
+		sDate, ok1 = Data["GameList"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.GameList(), conditions, &re, &sError)
+			reData["GameList"] = re
+		}
+
+		sDate, ok1 = Data["GameItem"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.GameItem(), conditions, &re, &sError)
+			reData["GameItem"] = re
+		}
+
+		sDate, ok1 = Data["ExchangeRate"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.ExchangeRate(), conditions, &re, &sError)
+			reData["ExchangeRate"] = re
+		}
+
+		sDate, ok1 = Data["PrimeCostRate"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.PrimeCostRate(), conditions, &re, &sError)
+			reData["PrimeCostRate"] = re
+		}
+
+		sDate, ok1 = Data["BulletinData"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			conditions["DESC"] = "Sid"
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.Bulletin(), conditions, &re, &sError)
+			reData["BulletinData"] = re
 		}
 
 	case iAction == C.REPLACE_ORDER, iAction == C.PAY_ORDER:
