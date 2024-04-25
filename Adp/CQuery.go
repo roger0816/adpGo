@@ -912,6 +912,24 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			reData["FactoryClass"] = re
 		}
 
+		sDate, ok1 = Data["PayType"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.PayType(), conditions, &re, &sError)
+			reData["PayType"] = re
+		}
+
+		sDate, ok1 = Data["UserBonus"].(string)
+		if ok1 {
+			conditions := make(map[string]interface{})
+			conditions["UpdateTime >"] = sDate
+			re := []interface{}{}
+			bOk = CSQL.QueryTb(C.SQL_TABLE.UserBonus(), conditions, &re, &sError)
+			reData["UserBonus"] = re
+		}
+
 		sDate, ok1 = Data["BulletinData"].(string)
 		if ok1 {
 			conditions := make(map[string]interface{})
