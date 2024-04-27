@@ -918,9 +918,8 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 					Name: "未分配",
 				}
 				re = append(re, fac)
-
-				reData["FactoryClass"] = re
 			*/
+			reData["FactoryClass"] = re
 		}
 
 		sDate, ok1 = Data["PayType"].(string)
