@@ -944,6 +944,36 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 		bOk, sOkMsg, sError = DoOrder(data, &reData, &reList)
 
+	case iAction == C.EDIT_SORT:
+		sTable, ok := Data["Table"].(string)
+		if ok && sTable == "FactoryClass" {
+			fmt.Printf("AAAAAA:0")
+			// 確保 Table 的值為 "FactoryClass"，並且是 string 類型
+			data, ok := Data["Data"].(map[string]interface{})
+			if ok {
+				// 確保 Data 的值是 map[string]interface{} 類型
+				fmt.Printf("AAAAAA:1")
+				for key, value := range data {
+					sSid := key // 因為 key 已經是 string 類型
+					sSort, ok := value.(string)
+					if ok {
+
+						//fmt.Printf("AAAAAA:1 sSid: %s, sSort: %s\n", sSid, sSort)
+
+						in := make(map[string]interface{})
+						in["Sid"] = sSid
+						conditions := make(map[string]interface{})
+						conditions["Sort"] = sSort
+						bOk = CSQL.UpdateTb(C.SQL_TABLE.FactoryClass(), in, conditions, &sError)
+
+						if bOk {
+							sOkMsg = "排序修改完成"
+						}
+					}
+				}
+			}
+		}
+
 	default:
 		// 未知操作，可以进行相应的处理
 		fmt.Printf("unknown action : %d \n", iAction)
