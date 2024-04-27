@@ -195,13 +195,14 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		}
 
 		bOk = CSQL.QueryTb(C.SQL_TABLE.FactoryClass(), d, &reList, &sError)
-
-		fac := C.DataFactory{
-			Sid:  999,
-			Id:   "未",
-			Name: "未分配",
-		}
-		reList = append(reList, fac)
+		/*
+			fac := C.DataFactory{
+				Sid:  999,
+				Id:   "未",
+				Name: "未分配",
+			}
+			reList = append(reList, fac)
+		*/
 
 	case iAction == C.QUERY_PAY_TYPE:
 		bOk = CSQL.QueryTb(C.SQL_TABLE.PayType(), Data, &reList, &sError)
@@ -909,7 +910,17 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			conditions["UpdateTime >"] = sDate
 			re := []interface{}{}
 			bOk = CSQL.QueryTb(C.SQL_TABLE.FactoryClass(), conditions, &re, &sError)
-			reData["FactoryClass"] = re
+
+			/*
+				fac := C.DataFactory{
+					Sid:  999,
+					Id:   "未",
+					Name: "未分配",
+				}
+				re = append(re, fac)
+
+				reData["FactoryClass"] = re
+			*/
 		}
 
 		sDate, ok1 = Data["PayType"].(string)
@@ -947,12 +958,12 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 	case iAction == C.EDIT_SORT:
 		sTable, ok := Data["Table"].(string)
 		if ok && sTable == "FactoryClass" {
-			fmt.Printf("AAAAAA:0")
+
 			// 確保 Table 的值為 "FactoryClass"，並且是 string 類型
 			data, ok := Data["Data"].(map[string]interface{})
 			if ok {
 				// 確保 Data 的值是 map[string]interface{} 類型
-				fmt.Printf("AAAAAA:1")
+
 				for key, value := range data {
 					sSid := key // 因為 key 已經是 string 類型
 					sSort, ok := value.(string)
