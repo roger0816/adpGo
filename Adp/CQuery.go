@@ -822,7 +822,8 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			conditions := make(map[string]interface{})
 
 			conditions["UpdateTime >"] = sDate
-			conditions["OrderDate >="] = C.DateUtc8Str(-1)
+			conditions["LIMIT"] = "3000"
+			conditions["OrderDate >="] = C.DateUtc8Str(-365)
 			reOrder := []interface{}{}
 			bOk = CSQL.QueryTb(C.SQL_TABLE.OrderData(), conditions, &reOrder, &sError)
 			reData["OrderData"] = reOrder
