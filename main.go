@@ -16,8 +16,9 @@ func main() {
 	fmt.Println("v2.2.0507")
 	fmt.Printf("args : %v\n", args)
 	listTen := "6005"
+	//test db
 	dbIp := "172.104.112.34"
-
+	//
 	//dbIp := "172.104.117.7"
 
 	Adp.OrderFuncIni()
