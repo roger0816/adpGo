@@ -410,7 +410,9 @@ func orderStep3(current C.OrderData, order *C.OrderData) (bool, string) {
 	if order.Step == "3" && len(order.PaddingUser) > 0 {
 
 		if current.Step == "3" && len(current.PaddingUser) > 0 {
-			return false, GetUser(string(current.PaddingUser)).Name + " 正在回報中"
+			if current.Note0 == order.Note0 {
+				return false, GetUser(string(current.PaddingUser)).Name + " 正在回報中"
+			}
 		}
 
 		if current.Step == "4" {
@@ -444,25 +446,24 @@ func orderStep4(current C.OrderData, order *C.OrderData) (bool, string) {
 		}
 	}
 
-	if current.Step == order.Step {
-		return false, "此訂單已回報"
+	if current.Step != order.Step {
+
+		var cost C.CustomerCost
+		cost.UserSid = C.StringToList(order.User, ",", 6)[3]
+		cost.Rate = order.ExRateSid
+		cost.CustomerSid = order.CustomerSid
+		cost.IsAddCost = false
+		cost.Currency = cus.Currency
+		cost.ChangeValue = "-" + order.Cost
+		preTotal = preTotal + C.StringToFloat64(cost.ChangeValue)
+		cost.Total = C.Float64ToString(preTotal)
+		cost.OrderId = order.Id
+		cost.OrderTime = order.OrderDate + order.OrderTime
+		CSQL.InsertTb(C.SQL_TABLE.CustomerCost(), C.StructToMap(cost), &sError, false)
+		changeMoney(cus, cost.Total, &sError)
 	}
 
-	var cost C.CustomerCost
-	cost.UserSid = C.StringToList(order.User, ",", 6)[3]
-	cost.Rate = order.ExRateSid
-	cost.CustomerSid = order.CustomerSid
-	cost.IsAddCost = false
-	cost.Currency = cus.Currency
-	cost.ChangeValue = "-" + order.Cost
-	preTotal = preTotal + C.StringToFloat64(cost.ChangeValue)
-	cost.Total = C.Float64ToString(preTotal)
-	cost.OrderId = order.Id
-	cost.OrderTime = order.OrderDate + order.OrderTime
-	CSQL.InsertTb(C.SQL_TABLE.CustomerCost(), C.StructToMap(cost), &sError, false)
-	changeMoney(cus, cost.Total, &sError)
 	return true, ""
-
 }
 
 func changeItemCount(orderData C.OrderData, bIsAdd bool, sError *string) bool {
