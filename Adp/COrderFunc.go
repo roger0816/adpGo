@@ -346,15 +346,19 @@ func orderStep1(current C.OrderData, order *C.OrderData) (bool, string) {
 
 			order.StepTime = C.ListToString(listStepTime, ",")
 
-			in := map[string]interface{}{
-				"Owner":     order.Owner,
-				"OrderDate": order.OrderDate,
-			}
-			var tmpOut []interface{}
-			var sError string
+			/*
+				in := map[string]interface{}{
+					"Owner":     order.Owner,
+					"OrderDate": order.OrderDate,
+				}
+				var tmpOut []interface{}
+				var sError string
 
-			CSQL.QueryTb(C.SQL_TABLE.OrderData(), in, &tmpOut, &sError)
-			iSeq := len(tmpOut)
+				CSQL.QueryTb(C.SQL_TABLE.OrderData(), in, &tmpOut, &sError)
+				iSeq := len(tmpOut)
+			*/
+
+			iSeq, _ := CSQL.GenerateId(order.Owner, order.OrderDate)
 			sDash := ""
 			if !strings.HasSuffix(order.Owner, "-") {
 				sDash = "-"
@@ -365,7 +369,7 @@ func orderStep1(current C.OrderData, order *C.OrderData) (bool, string) {
 			} else {
 				if order.Owner != "未分配" {
 					// iSeq should be defined somewhere above.
-					order.Name = order.Owner + sDash + fmt.Sprintf("%02d", iSeq+1)
+					order.Name = order.Owner + sDash + fmt.Sprintf("%02d", iSeq)
 				}
 			}
 
@@ -550,6 +554,28 @@ func changeItemCount(orderData C.OrderData, bIsAdd bool, sError *string) bool {
 }
 
 func getNewOrderId(sOrderDate string) (string, error) {
+
+	date := sOrderDate
+
+	iId, err := CSQL.GenerateId("orderId", date)
+
+	if err != nil {
+		return "", err
+	}
+
+	sNum := fmt.Sprintf("%03d", iId%1000)
+
+	sChar := string(rune(iId/1000 + 65))
+
+	if len(date) > 6 {
+		date = date[len(date)-6:]
+	}
+
+	return date + "-" + sChar + sNum, nil
+
+}
+
+func getNewOrderIdA(sOrderDate string) (string, error) {
 	orderIdAdd := func(sDate string, last string) string {
 		date := sDate
 

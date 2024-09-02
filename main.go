@@ -13,7 +13,7 @@ import (
 func main() {
 
 	args := os.Args[1:] // [1:] 可以跳過程序名稱
-	fmt.Println("v2.2.0507")
+	fmt.Println("v2.2.0903")
 	fmt.Printf("args : %v\n", args)
 	listTen := "6005"
 	//test db

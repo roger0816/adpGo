@@ -476,6 +476,66 @@ func BatchUpdateTb(sTableName string, conditionsList, dataList []map[string]inte
 	return true
 }
 
+func GenerateId(owner string, date string) (int, error) {
+	var id int
+
+	// 當前時間作為 UpdateTime
+	updateTime := CurrentTime()
+
+	// 開始事務
+	db := writeDb()
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+
+	// 確保在函數結束時根據情況提交或回滾事務
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	// 鎖定特定 owner 和日期的行
+	err = tx.QueryRow(`
+        SELECT Id 
+        FROM MakeId 
+        WHERE Owner = ? AND Date = ? 
+        FOR UPDATE`, owner, date).Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// 如果沒有記錄，插入初始值 1
+			id = 1
+			_, err = tx.Exec(`
+                INSERT INTO MakeId (Id, Date, Owner, UpdateTime) 
+                VALUES (?, ?, ?, ?)`, id, date, owner, updateTime)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			return 0, err
+		}
+	} else {
+		// 如果記錄存在，遞增 Id
+		id += 1
+		_, err = tx.Exec(`
+            UPDATE MakeId 
+            SET Id = ?, UpdateTime = ? 
+            WHERE Owner = ? AND Date = ?`, id, updateTime, owner, date)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	// 返回新的 Id
+	return id, nil
+}
+
 func LockInsertTb(sTableName string, input map[string]interface{}, sError *string, bOrReplace bool) (bool, int64, map[string]interface{}) {
 	data := input
 
