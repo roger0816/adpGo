@@ -357,7 +357,7 @@ func UpdateTb(sTableName string, conditions, data map[string]interface{}, sError
 
 	_, execErr := stmt.Exec(args...)
 	if execErr != nil {
-		log.Fatal(execErr)
+		fmt.Println(execErr)
 	}
 	setLastUpdateTime(sTableName, sDateTime)
 

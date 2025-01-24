@@ -271,12 +271,14 @@ type DataFactory struct {
 type DataGameList struct {
 	Sid        int    `json:"Sid" structs:"Sid"`
 	Id         string `json:"Id" structs:"Id"`
+	IsDelete   int    `json:"IsDelete" structs:"IsDelete"`
 	Name       string `json:"Name" structs:"Name"`
 	UpdateTime string `json:"UpdateTime" structs:"UpdateTime"`
 	Enable     bool   `json:"Enable" structs:"Enable"`
 	GameRate   string `json:"GameRate" structs:"GameRate"`
 	UserSid    string `json:"UserSid" structs:"UserSid"`
 	SellNote   string `json:"SellNote" structs:"SellNote"`
+	BK         string `json:"BK" structs:"BK"`
 }
 
 type DataGameRate struct {
@@ -286,6 +288,7 @@ type DataGameRate struct {
 	Rate       string `json:"Rate" structs:"Rate"`
 	UserSid    string `json:"UserSid" structs:"UserSid"`
 	UpdateTime string `json:"UpdateTime" structs:"UpdateTime"`
+	BK         string `json:"BK" structs:"BK"`
 }
 
 type DataGameItem struct {

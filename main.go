@@ -13,7 +13,7 @@ import (
 func main() {
 
 	args := os.Args[1:] // [1:] 可以跳過程序名稱
-	fmt.Println("v2.2.0903")
+	fmt.Println("v2.2.0124")
 	fmt.Printf("args : %v\n", args)
 	listTen := "6005"
 	//test db
@@ -21,17 +21,23 @@ func main() {
 	//
 	//dbIp := "172.104.117.7"
 
+	dbName := "adp"
+
 	Adp.OrderFuncIni()
 
 	if len(args) > 1 {
 		dbIp = args[1]
 	}
 
+	if len(args) > 2 {
+		dbName = args[2]
+	}
+
 	if len(args) > 0 {
 		listTen = args[0]
 	}
 
-	err := CSQL.OpenDb(dbIp, "3306", "adp", "roger", "Aa111111")
+	err := CSQL.OpenDb(dbIp, "3306", dbName, "roger", "Aa111111")
 
 	if err != nil {
 		fmt.Println("open db false")
