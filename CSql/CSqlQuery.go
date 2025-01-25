@@ -340,7 +340,8 @@ func UpdateTb(sTableName string, conditions, data map[string]interface{}, sError
 
 	stmt, err := writeDb().Prepare(query)
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
+		fmt.Print(err)
 	}
 	defer stmt.Close()
 
