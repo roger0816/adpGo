@@ -63,47 +63,65 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		bOk = false
 		sError = "連線失敗"
 
-		if len(data.ListData) >= 2 {
+		bCheckVer := false
+
+		if len(data.ListData) >= 3 {
 
 			in := map[string]interface{}{
 				"Id":       data.ListData[0],
 				"Password": data.ListData[1],
 			}
-			C.PrintHHMMSS("A1")
-			tmpB := CSQL.QueryTb(C.SQL_TABLE.UserData(), in, &reList, &sError)
 
-			if tmpB {
-				sError = "帳密錯誤"
-			}
+			verStr, _ := data.ListData[2].(string)
 
-			if len(reList) > 0 {
-				C.PrintHHMMSS("A2")
-				strBytes := []byte(C.TimeUtc8Str())
-				hash := md5.Sum(strBytes)
-				sSession := hex.EncodeToString(hash[:])
-				C.PrintHHMMSS("A3")
-				reList[0].(map[string]interface{})["Session"] = sSession
-				fmt.Println(sSession)
-				C.InterFaceToMap(reList[0], reData.Origin())
-				C.PrintHHMMSS("A4")
-				var UserSid int
-				if sid, ok := reData["Sid"].(float64); ok {
-					UserSid = int(sid)
+			ver, err := strconv.ParseFloat(verStr, 64)
+			if err != nil {
+				fmt.Println("解析版本號錯誤：", err)
+
+			} else {
+				if ver > 2.3 {
+					fmt.Println("版本大於 2.3")
+					bCheckVer = true
 				} else {
-					// 处理无法转换为字符串的情况
-					fmt.Println("Failed to convert Sid to string")
+					sError = "版本不符合"
 				}
-				C.PrintHHMMSS("A5")
-				LoginUser[strconv.Itoa(UserSid)] = sSession
-				bOk = true
-				sOkMsg = "登入成功"
-
-				fmt.Println("loging msg : " + sOkMsg)
 			}
 
-		}
+			if bCheckVer {
 
-		C.PrintHHMMSS("A6")
+				tmpB := CSQL.QueryTb(C.SQL_TABLE.UserData(), in, &reList, &sError)
+
+				if tmpB {
+					sError = "帳密錯誤"
+				}
+
+				if len(reList) > 0 {
+
+					strBytes := []byte(C.TimeUtc8Str())
+					hash := md5.Sum(strBytes)
+					sSession := hex.EncodeToString(hash[:])
+
+					reList[0].(map[string]interface{})["Session"] = sSession
+					fmt.Println(sSession)
+					C.InterFaceToMap(reList[0], reData.Origin())
+
+					var UserSid int
+					if sid, ok := reData["Sid"].(float64); ok {
+						UserSid = int(sid)
+					} else {
+						// 处理无法转换为字符串的情况
+						fmt.Println("Failed to convert Sid to string")
+					}
+
+					LoginUser[strconv.Itoa(UserSid)] = sSession
+					bOk = true
+					sOkMsg = "登入成功"
+
+					fmt.Println("loging msg : " + sOkMsg)
+				}
+
+			}
+		}
 
 		//
 	case iAction == C.SET_VALUE:
