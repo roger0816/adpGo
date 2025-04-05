@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"os/exec"
 	"strconv"
 
 	CSQL "github.com/roger0816/adpGo/CSql"
@@ -982,6 +983,24 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 						}
 					}
 				}
+			}
+		}
+
+	case iAction == C.RUN_SH:
+		sRun, bCheck := Data["Run"].(string)
+
+		if bCheck {
+			cmd := exec.Command("/bin/sh", sRun)
+			err := cmd.Run()
+			if err != nil {
+				bOk = false
+
+			} else {
+				bOk = true
+			}
+
+			if bOk {
+				sOkMsg = "已啟動"
 			}
 		}
 
