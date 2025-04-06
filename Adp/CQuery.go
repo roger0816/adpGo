@@ -73,7 +73,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 			}
 
 			verStr, _ := data.ListData[2].(string)
-
+			fmt.Println("解析版本字串：", verStr)
 			ver, err := strconv.ParseFloat(verStr, 64)
 			if err != nil {
 				fmt.Println("解析版本號錯誤：", err)
