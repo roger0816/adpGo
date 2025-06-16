@@ -10,11 +10,11 @@ start() {
 
     ./adpGo 6301 167.172.79.240 adt3 > /dev/null 2>&1 &
  
-    ./adpGo 6401 167.172.79.240 adt1 > /dev/null 2>&1 &
+    ./adpGo 6401 167.172.79.240 adt4 > /dev/null 2>&1 &
 
-    ./adpGo 6501 167.172.79.240 adt2 > /dev/null 2>&1 &
+    ./adpGo 6501 167.172.79.240 adt5 > /dev/null 2>&1 &
 
-    ./adpGo 6601 167.172.79.240 adt3 > /dev/null 2>&1 &
+    ./adpGo 6601 167.172.79.240 adt6 > /dev/null 2>&1 &
  
 
   
