@@ -333,6 +333,13 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	case iAction == C.EDIT_CUSTOMER:
 
+		// 確保 Sid 存在
+		_, ok := Data["Sid"]
+		if !ok {
+			sError = "資料異常：缺少 Sid"
+			break
+		}
+
 		tmpIn["Sid"] = Data["Sid"]
 		bOk = CSQL.UpdateTb(C.SQL_TABLE.CustomerData(), tmpIn, Data, &sError)
 		sOkMsg = "修改成功"
