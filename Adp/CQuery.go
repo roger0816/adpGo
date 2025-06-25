@@ -317,6 +317,13 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	case iAction == C.EDIT_USER:
 		in := make(map[string]interface{})
+
+		_, ok := Data["Sid"]
+		if !ok {
+			sError = "資料異常：缺少 Sid"
+			break
+		}
+
 		in["Sid"] = Data["Sid"]
 		bOk = CSQL.UpdateTb(C.SQL_TABLE.UserData(), in, Data, &sError)
 		sOkMsg = "修改成功"
@@ -345,6 +352,12 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		sOkMsg = "修改成功"
 
 	case iAction == C.DEL_CUSTOMER:
+
+				_, ok := Data["Sid"]
+		if !ok {
+			sError = "資料異常：缺少 Sid"
+			break
+		}
 		in := make(map[string]interface{})
 		in["Sid"] = Data["Sid"]
 		bOk = CSQL.DelFromTb(C.SQL_TABLE.CustomerData(), in, &sError)
@@ -417,6 +430,13 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	case iAction == C.EDIT_GAME_LIST:
 
+
+		_, ok := Data["Sid"]
+		if !ok {
+			sError = "資料異常：缺少 Sid"
+			break
+		}
+
 		in := map[string]interface{}{
 			"Sid": Data["Sid"],
 		}
@@ -444,6 +464,14 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		sOkMsg = "遊戲修改完成"
 
 	case iAction == C.DEL_GAME_LIST:
+
+
+		_, ok := Data["Sid"]
+		if !ok {
+			sError = "資料異常：缺少 Sid"
+			break
+		}
+
 		tmpIn["Sid"] = Data["Sid"]
 		bOk = CSQL.DelFromTb(C.SQL_TABLE.GameList(), tmpIn, &sError)
 		if bOk {
