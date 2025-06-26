@@ -1,4 +1,4 @@
-package Common
+package common
 
 const (
 	SET_VALUE  = 9901

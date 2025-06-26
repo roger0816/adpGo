@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	Adp "github.com/roger0816/adpGo/Adp"
-	CSQL "github.com/roger0816/adpGo/CSql"
-	C "github.com/roger0816/adpGo/Common"
-	NETWORK "github.com/roger0816/adpGo/RpkNetwork"
+	C "adpGo/common"
+	Adp "adpGo/internal/Adp"
+	CSQL "adpGo/pkg/CSql"
+	NETWORK "adpGo/pkg/RpkNetwork"
 )
 
 func main() {
@@ -52,18 +52,8 @@ func main() {
 }
 
 func runServer(sPort string) {
-	go NETWORK.StartTcpServer(sPort, Adp.AdpRecaller{})
-	fmt.Println("server start " + sPort)
-	iTmp := C.StringToInt64(sPort)
 
-	sSubPort := C.Int64ToString(iTmp + 10)
-
-	go NETWORK.StartTcpServer(sSubPort, Adp.AdpRecaller{})
-	fmt.Println("server start " + sSubPort)
-
-	sApiPort := C.Int64ToString(iTmp + 20)
-	go NETWORK.StartApiServer(sApiPort)
-	fmt.Println("api start " + sApiPort)
+	go NETWORK.RunApi(sPort, Adp.AdpRecaller{})
 
 }
 

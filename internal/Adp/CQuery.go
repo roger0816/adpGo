@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"strconv"
 
-	CSQL "github.com/roger0816/adpGo/CSql"
-	C "github.com/roger0816/adpGo/Common"
-	NETWORK "github.com/roger0816/adpGo/RpkNetwork"
+	C "adpGo/common"
+	CSQL "adpGo/pkg/CSql"
+	NETWORK "adpGo/pkg/RpkNetwork"
 )
 
 //show global status like 'com_stmt%';
@@ -353,7 +353,7 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	case iAction == C.DEL_CUSTOMER:
 
-				_, ok := Data["Sid"]
+		_, ok := Data["Sid"]
 		if !ok {
 			sError = "資料異常：缺少 Sid"
 			break
@@ -430,7 +430,6 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 
 	case iAction == C.EDIT_GAME_LIST:
 
-
 		_, ok := Data["Sid"]
 		if !ok {
 			sError = "資料異常：缺少 Sid"
@@ -464,7 +463,6 @@ func (d AdpRecaller) ImplementRecall(data NETWORK.CData) NETWORK.CData {
 		sOkMsg = "遊戲修改完成"
 
 	case iAction == C.DEL_GAME_LIST:
-
 
 		_, ok := Data["Sid"]
 		if !ok {

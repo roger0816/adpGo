@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	CSQL "github.com/roger0816/adpGo/CSql"
-	C "github.com/roger0816/adpGo/Common"
-	NETWORK "github.com/roger0816/adpGo/RpkNetwork"
+	C "adpGo/common"
+	CSQL "adpGo/pkg/CSql"
+	NETWORK "adpGo/pkg/RpkNetwork"
 )
 
 func OrderFuncIni() {
