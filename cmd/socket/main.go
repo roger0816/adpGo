@@ -70,7 +70,7 @@ func runServer(sPort string) {
 }
 
 func test1() {
-	var data NETWORK.CData
+	var data C.CData
 
 	data.Action = 1000
 

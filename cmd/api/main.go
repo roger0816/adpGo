@@ -53,12 +53,12 @@ func main() {
 
 func runServer(sPort string) {
 
-	go NETWORK.RunApi(sPort, Adp.AdpRecaller{})
+	go Adp.RunApi(sPort)
 
 }
 
 func test1() {
-	var data NETWORK.CData
+	var data C.CData
 
 	data.Action = 1000
 

@@ -1,6 +1,7 @@
 package RpkNetwork
 
 import (
+	C "adpGo/common"
 	"bytes"
 	"fmt"
 	"io"
@@ -12,13 +13,13 @@ import (
 
 // Step 1: 定義一個 Recaller interface
 type Recaller interface {
-	ImplementRecall(data CData) CData
+	ImplementRecall(data C.CData) C.CData
 }
 
 // 默認的實現
 type DefaultRecaller struct{}
 
-func (d DefaultRecaller) ImplementRecall(data CData) CData {
+func (d DefaultRecaller) ImplementRecall(data C.CData) C.CData {
 	// 你的默認操作
 	return data // 返回修改後的data或原始data
 }
@@ -68,7 +69,7 @@ func handleConnection(conn net.Conn, recaller Recaller) {
 		}
 	}
 
-	var decodedData CData
+	var decodedData C.CData
 	err2 := decodedData.DecodeJSON(unBuff)
 	if err2 != nil {
 		fmt.Println("Error decoding JSON:", err2)
@@ -159,37 +160,37 @@ func SendTcp(ip, port, message string) (string, error) {
 
 }
 
-func SendTcpData(ip, port string, data CData) (CData, error) {
+func SendTcpData(ip, port string, data C.CData) (C.CData, error) {
 
 	fmt.Println("send tcp data")
 
 	conn, err := net.Dial("tcp", ip+":"+port)
 	if err != nil {
-		return CData{}, fmt.Errorf("Error connecting: %v", err)
+		return C.CData{}, fmt.Errorf("Error connecting: %v", err)
 	}
 	defer conn.Close()
 
 	encodedData, err := data.EncodeJSON()
 	if err != nil {
-		return CData{}, fmt.Errorf("Error encoding data: %v", err)
+		return C.CData{}, fmt.Errorf("Error encoding data: %v", err)
 	}
 	fmt.Printf("send tcp : %x", encodedData)
 	_, err = conn.Write(encodedData)
 	if err != nil {
-		return CData{}, fmt.Errorf("Error sending data: %v", err)
+		return C.CData{}, fmt.Errorf("Error sending data: %v", err)
 	}
 
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
-		return CData{}, fmt.Errorf("Error receiving data: %v", err)
+		return C.CData{}, fmt.Errorf("Error receiving data: %v", err)
 	}
 
 	receivedData := buffer[:n]
-	var response CData
+	var response C.CData
 	err = response.DecodeJSON(receivedData)
 	if err != nil {
-		return CData{}, fmt.Errorf("Error decoding response: %v", err)
+		return C.CData{}, fmt.Errorf("Error decoding response: %v", err)
 	}
 
 	return response, nil

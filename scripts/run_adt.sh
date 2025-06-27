@@ -3,6 +3,8 @@
 start() {
     echo "Starting adpGo processes..."
 
+    cd ../bin
+
     # 启动 adpGo 进程，不保存日志
     ./adpGo 6101 159.223.54.194 adt1 > /dev/null 2>&1 &
 

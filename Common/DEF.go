@@ -109,6 +109,8 @@ const (
 	QUERY_MIX   = 6031
 	UPDATE_DATA = 6999
 	API_REQUSET = 7000
+
+	API_TEST = 7001
 )
 
 type SqlTable struct{}

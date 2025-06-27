@@ -8,14 +8,14 @@ import (
 
 	C "adpGo/common"
 	CSQL "adpGo/pkg/CSql"
-	NETWORK "adpGo/pkg/RpkNetwork"
+	//NETWORK "adpGo/pkg/RpkNetwork"
 )
 
 func OrderFuncIni() {
 	println("orderFunc 1227")
 }
 
-func DoOrder(oriData NETWORK.CData, reData *C.VariantMap, reList *[]interface{}) (bOk bool, sOkMsg string, sError string) {
+func DoOrder(oriData C.CData, reData *C.VariantMap, reList *[]interface{}) (bOk bool, sOkMsg string, sError string) {
 
 	var tmpIn C.VariantMap = make(map[string]interface{})
 

@@ -4,7 +4,9 @@
 
 killall adpGoTest
 
-cp ../bin/adpGo ../bin/adpGoTest
+cd ../bin
+
+cp adpGo adpGoTest
 
 
-../bin/adpGo 6103 172.104.112.34 adp > /dev/null 2>&1 &
+./adpGo 6103 172.104.112.34 adp > /dev/null 2>&1 &
