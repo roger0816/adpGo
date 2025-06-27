@@ -578,6 +578,7 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 			d := make(map[string]interface{})
 			d["Sid"] = Data["Sid"]
 			Data["Count"] = nil
+			Data["UserSid"] = data.User
 			bOk = CSQL.UpdateTb(C.SQL_TABLE.GameItem(), d, Data, &sError)
 
 		} else {
