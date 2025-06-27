@@ -2,11 +2,11 @@
 
 
 
-killall adpGoTest
+killall adpTest
 
 cd ../bin
 
-cp adpGo adpGoTest
+cp adpGo adpTest
 
 
-./adpGo 6103 172.104.112.34 adp > /dev/null 2>&1 &
+./adpTest 6103 172.104.112.34 adp > /dev/null 2>&1 &
