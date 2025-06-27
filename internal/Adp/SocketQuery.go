@@ -532,6 +532,7 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 			delete(Data, "Count")
 		}
 
+		Data["UserSid"] = data.User
 		var itemSid int64
 		bOk, itemSid, _ = CSQL.InsertTb(C.SQL_TABLE.GameItem(), Data, &sError, false)
 
@@ -549,6 +550,7 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 			tmpMap = C.StructToMap(itemCount)
 
 			dataCount := make(map[string]interface{})
+
 			bOk, _, dataCount = CSQL.InsertTb(C.SQL_TABLE.GameItemCount(), tmpMap, &sError, false)
 
 			UpdateQueryCount(dataCount)
@@ -603,6 +605,11 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 				}
 
 				listMap, _ := C.ToListMap(data.ListData)
+
+				for i := range listMap {
+					listMap[i]["UserSid"] = data.User
+				}
+
 				bOk = CSQL.BatchUpdateTb(C.SQL_TABLE.GameItem(), listConditions, listMap, &sError)
 
 			} else {
@@ -610,6 +617,7 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 				//方式2
 				for _, t := range data.ListData {
 					tmpMap, ok := t.(map[string]interface{}) // 這裡進行類型斷言
+					tmpMap["UserSid"] = data.User
 					if !ok {
 						fmt.Println("t 不是 map[string]interface{} 的型別")
 						continue // 如果斷言失敗，則跳過此次迴圈的迭代
@@ -618,7 +626,7 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 					tmp["Sid"] = tmpMap["Sid"]
 					tmp["Count"] = nil
 					// 假設 CSQL.UpdateTb 是一個用來更新數據表的Go函數
-					b := CSQL.UpdateTb("GameItem", tmp, tmpMap, &sError)
+					b := CSQL.UpdateTb(C.SQL_TABLE.GameItem(), tmp, tmpMap, &sError)
 					if !b {
 						bOk = false
 					}
