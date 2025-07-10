@@ -3,5 +3,5 @@
 
 cd ../bin
 
-./adpApi 6105 172.104.117.7 adp > /dev/null 2>&1 &
+./adpApi 6105 db.adp.idv.tw adp > /dev/null 2>&1 &
 

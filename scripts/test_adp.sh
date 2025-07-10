@@ -9,4 +9,4 @@ cd ../bin
 cp adpGo adpTest
 
 
-./adpTest 6103 172.104.112.34 adp > /dev/null 2>&1 &
+./adpTest 6103 db.adp.idv.tw adpTest > /dev/null 2>&1 &
