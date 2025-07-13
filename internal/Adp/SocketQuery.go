@@ -918,6 +918,9 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 
 		sDate, ok1 = Data["CustomerData"].(string)
 		if ok1 {
+
+			count := CSQL.QueryCount(C.SQL_TABLE.CustomerData(), nil, true)
+
 			conditions := make(map[string]interface{})
 			conditions["ASC"] = "UpdateTime"
 			conditions["LIMIT"] = "5000"
@@ -936,6 +939,7 @@ func (d AdpRecaller) ImplementRecall(data C.CData) C.CData {
 			}
 
 			reData["CustomerData"] = reCus
+			reData["CustomerCount"] = count
 		}
 
 		sDate, ok1 = Data["UserData"].(string)

@@ -17,11 +17,9 @@ func main() {
 	fmt.Printf("args : %v\n", args)
 	listTen := "6005"
 	//test db
-	dbIp := "172.104.112.34"
+	dbIp := "db.adp.idv.tw"
+	dbName := "adpTest"
 	//
-	//dbIp := "172.104.117.7"
-
-	dbName := "adp"
 
 	Adp.OrderFuncIni()
 
